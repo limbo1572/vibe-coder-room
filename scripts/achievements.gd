@@ -145,6 +145,8 @@ var unlocked: Dictionary = {}
 func _ready() -> void:
 	load_unlocked()
 	GameState.stats_changed.connect(_check_all)
+	# Defer so GameUI can connect to achievement_unlocked before first unlock emit.
+	await get_tree().process_frame
 	_check_all()
 
 
