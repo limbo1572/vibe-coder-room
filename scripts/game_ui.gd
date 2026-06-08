@@ -83,7 +83,7 @@ var _passive_pending_gain: float = 0.0
 var _passive_popup_timer: float = 0.0
 var _debug_skill_panel: PanelContainer
 var _debug_skill_status: Label
-var _milestone_log_label: Label
+var _milestone_log_label: TextEdit
 var _achievements_button: Button
 var _achievements_overlay: Control
 var _achievements_title_label: Label
@@ -724,15 +724,17 @@ func _add_prestige_tree_tester_row(outer: VBoxContainer) -> void:
 
 
 func _add_milestone_log_row(outer: VBoxContainer) -> void:
-	var data_title := Label.new()
-	data_title.text = "Дані тесту (скинь розробнику):"
-	data_title.add_theme_color_override("font_color", C_MUTED)
-	data_title.add_theme_font_size_override("font_size", 12)
-	outer.add_child(data_title)
+	var copy_hint := Label.new()
+	copy_hint.text = "Виділи текст нижче і скопіюй (Ctrl+C), потім скинь розробнику:"
+	copy_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	copy_hint.add_theme_color_override("font_color", C_MUTED)
+	copy_hint.add_theme_font_size_override("font_size", 12)
+	outer.add_child(copy_hint)
 
-	_milestone_log_label = Label.new()
-	_milestone_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_milestone_log_label.add_theme_color_override("font_color", C_TEXT)
+	_milestone_log_label = TextEdit.new()
+	_milestone_log_label.editable = false
+	_milestone_log_label.scroll_fit_content_height = true
+	_milestone_log_label.custom_minimum_size = Vector2(0, 160)
 	_milestone_log_label.add_theme_font_size_override("font_size", 12)
 	_milestone_log_label.text = GameState.get_milestone_log()
 	outer.add_child(_milestone_log_label)
@@ -1187,7 +1189,9 @@ func _refresh_prestige_tree() -> void:
 		_prestige_tree_points_label.text = "%d refactor pts" % GameState.prestige_points
 
 	if _milestone_log_label != null:
-		_milestone_log_label.text = GameState.get_milestone_log()
+		var fresh := GameState.get_milestone_log()
+		if _milestone_log_label.text != fresh:
+			_milestone_log_label.text = fresh
 
 	for skill_id: String in _prestige_tree_rows:
 		var row: PanelContainer = _prestige_tree_rows[skill_id]
