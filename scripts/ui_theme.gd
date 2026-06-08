@@ -9,13 +9,13 @@ const C_PANEL := Color(0.08, 0.06, 0.14, 0.88)
 const C_MUTED := Color("#9a9ac8")
 const C_TEXT := Color("#e8e0ff")
 
-const FONT_STAT := 20
-const FONT_UPGRADE_NAME := 18
-const FONT_UPGRADE_PRICE := 16
-const FONT_MEME := 14
-const FONT_CATEGORY := 16
-const FONT_BONUS := 15
-const FONT_BONUS_SMALL := 14
+const FONT_STAT := 23
+const FONT_UPGRADE_NAME := 21
+const FONT_UPGRADE_PRICE := 18
+const FONT_MEME := 16
+const FONT_CATEGORY := 18
+const FONT_BONUS := 17
+const FONT_BONUS_SMALL := 16
 
 
 static func style_button(button: Button, accent: Color) -> void:
