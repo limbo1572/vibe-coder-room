@@ -10,7 +10,7 @@ signal passive_gain(loc_gain: float)
 signal captcha_triggered
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SAVE_VERSION := 8
+const CURRENT_SAVE_VERSION := 9
 const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
 const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
 const AUTOSAVE_SEC := 10.0
@@ -31,7 +31,8 @@ const BASE_QA_POWER := 0.0
 
 const PRESTIGE_MONEY_THRESHOLD := 1_000_000.0
 const STAT_SOFT_CAP := 1e100
-const TESTER_MODE := true  # true для тестерів на itch, false для публічного релізу
+const MEASURE_MODE := true   # логер віх для збору кривої балансу (заїзд: true, реліз: false)
+const DEBUG_CHEATS := false  # чити+дебаг-панелі для розробки (заїзд: false, реліз: false)
 
 var loc: float = 0.0
 var money: float = 0.0
@@ -104,7 +105,7 @@ var _milestone_logger: ProgressMilestoneLogger
 func _ready() -> void:
 	_init_milestone_logger()
 	load_game()
-	if TESTER_MODE and _milestone_logger != null:
+	if MEASURE_MODE and _milestone_logger != null:
 		_milestone_logger.sync_from_save(self)
 	_autosave_timer = Timer.new()
 	_autosave_timer.wait_time = AUTOSAVE_SEC
@@ -115,7 +116,7 @@ func _ready() -> void:
 
 func _init_milestone_logger() -> void:
 	_milestone_logger = ProgressMilestoneLogger.new()
-	if TESTER_MODE:
+	if MEASURE_MODE:
 		_milestone_logger.begin()
 
 
@@ -365,14 +366,14 @@ func buy_skill(skill_id: String) -> bool:
 
 
 func debug_buy_skill(skill_id: String) -> bool:
-	if not TESTER_MODE:
+	if not DEBUG_CHEATS:
 		return false
 	used_cheats = true
 	return buy_skill(skill_id)
 
 
 func grant_prestige_points(amount: int) -> void:
-	if not TESTER_MODE:
+	if not DEBUG_CHEATS:
 		return
 	if amount <= 0:
 		return
@@ -697,7 +698,7 @@ func _apply_default_state() -> void:
 	last_tick_time = _now()
 	total_play_time = 0.0
 	recalculate_stats()
-	if _milestone_logger != null and TESTER_MODE:
+	if _milestone_logger != null and MEASURE_MODE:
 		_milestone_logger.reset_session()
 
 
@@ -722,7 +723,7 @@ func _delete_save_file() -> void:
 
 func _validate_save_data(data: Dictionary) -> bool:
 	var version := int(data.get("save_version", 0))
-	if version < 2:
+	if version < 9:
 		return false
 
 	if not _is_valid_nonneg_finite(float(data.get("loc", 0.0))):
