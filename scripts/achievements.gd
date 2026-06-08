@@ -234,9 +234,9 @@ func _is_unlocked(id: String) -> bool:
 		"deploy_machine":
 			return gs.total_deploys >= 100
 		"refactor_holic":
-			return gs.prestige_points >= 10
+			return gs.lifetime_prestige_points >= 10
 		"honest_dev":
-			return gs.prestige_points >= 1 and not gs.used_cheats
+			return gs.lifetime_prestige_points >= 1 and not gs.used_cheats
 		"cheater":
 			return gs.used_cheats
 		"friday_deploy":

@@ -43,6 +43,7 @@ var deploy_rate: float = BASE_DEPLOY_RATE
 var qa_power: float = BASE_QA_POWER
 var prestige_mult: float = 1.0
 var prestige_points: int = 0
+var lifetime_prestige_points: int = 0   # сумарно зароблених очок престижу (база множника, лише росте)
 var prestige_count: int = 0
 
 var upgrade_owned: Dictionary = {}
@@ -379,6 +380,8 @@ func grant_prestige_points(amount: int) -> void:
 		return
 	used_cheats = true
 	prestige_points += amount
+	lifetime_prestige_points += amount
+	prestige_mult = 1.0 + lifetime_prestige_points * 0.1
 	save_game()
 	stats_changed.emit()
 	print("Granted %d prestige points (total: %d)" % [amount, prestige_points])
@@ -527,6 +530,7 @@ func save_game() -> void:
 		"bugs": bugs,
 		"deploy_rate": deploy_rate,
 		"prestige_points": prestige_points,
+		"lifetime_prestige_points": lifetime_prestige_points,
 		"prestige_count": prestige_count,
 		"prestige_mult": prestige_mult,
 		"upgrade_owned": upgrade_owned.duplicate(),
@@ -594,6 +598,15 @@ func load_game() -> bool:
 	prestige_points = int(data.get("prestige_points", 0))
 	prestige_count = int(data.get("prestige_count", 0))
 	prestige_mult = float(data.get("prestige_mult", 1.0))
+	var saved_lifetime := int(data.get("lifetime_prestige_points", -1))
+	if saved_lifetime < 0:
+		# старий сейв: відновити lifetime з множника (mult = 1 + lifetime*0.1)
+		var from_mult := int(round((prestige_mult - 1.0) / 0.1))
+		lifetime_prestige_points = maxi(from_mult, prestige_points)
+	else:
+		lifetime_prestige_points = saved_lifetime
+	# перерахувати множник від lifetime для консистентності
+	prestige_mult = 1.0 + lifetime_prestige_points * 0.1
 	total_play_time = float(data.get("total_play_time", 0.0))
 
 	var save_version := int(data.get("save_version", 0))
@@ -665,6 +678,7 @@ func _apply_default_state() -> void:
 	money = 0.0
 	bugs = 0.0
 	prestige_points = 0
+	lifetime_prestige_points = 0
 	prestige_count = 0
 	prestige_mult = 1.0
 	click_unlocked = false
@@ -903,7 +917,8 @@ func prestige() -> int:
 		return 0
 	var new_points := preview_prestige_points()
 	prestige_points += new_points
-	prestige_mult = 1.0 + prestige_points * 0.1
+	lifetime_prestige_points += new_points
+	prestige_mult = 1.0 + lifetime_prestige_points * 0.1
 
 	loc = 0.0
 	bugs = 0.0

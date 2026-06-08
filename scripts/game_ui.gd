@@ -1589,7 +1589,7 @@ func _on_prestige_pressed() -> void:
 	var flavor := FlavorLines.prestige_text(GameState.prestige_count)
 	var gained := GameState.preview_prestige_points()
 	var cur_mult := GameState.prestige_mult
-	var new_mult := 1.0 + (GameState.prestige_points + gained) * 0.1
+	var new_mult := 1.0 + (GameState.lifetime_prestige_points + gained) * 0.1
 	_prestige_dialog.dialog_text = "%s\n\n+%d refactor pts · множник ×%.1f → ×%.1f (+10%% до всього за очко, назавжди)" % [
 		flavor, gained, cur_mult, new_mult,
 	]
