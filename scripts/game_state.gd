@@ -798,14 +798,17 @@ func tick_passive_realtime() -> void:
 	if elapsed <= ACTIVE_TICK_MAX:
 		total_play_time += elapsed
 	last_tick_time = now
-	var gains := _apply_passive_for_elapsed(elapsed)
+	var is_offline := elapsed > ACTIVE_TICK_MAX
+	var gains := _apply_passive_for_elapsed(elapsed, is_offline)
 	if gains.loc > 0.0:
 		passive_gain.emit(gains.loc)
 
 
-func _apply_passive_for_elapsed(elapsed: float) -> Dictionary:
+func _apply_passive_for_elapsed(elapsed: float, is_offline: bool = false) -> Dictionary:
 	var result := {"loc": 0.0, "bugs_added": 0.0}
 	if elapsed <= 0.0:
+		return result
+	if is_offline and not offline_progress_enabled:
 		return result
 
 	var changed := false
@@ -923,6 +926,9 @@ func prestige() -> int:
 	loc = 0.0
 	bugs = 0.0
 	upgrade_owned.clear()
+	_flavor_bug_level_1 = false
+	_flavor_bug_level_2 = false
+	_flavor_bug_level_3 = false
 	recalculate_stats()
 	money = prestige_start_money
 	prestige_count += 1
