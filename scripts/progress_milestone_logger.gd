@@ -20,6 +20,7 @@ var _enabled := false
 var _session_start_msec: int = 0
 var _clicks: int = 0
 var _hit: Dictionary = {}
+var _log_lines: PackedStringArray = []
 
 
 func begin() -> void:
@@ -27,6 +28,7 @@ func begin() -> void:
 	_session_start_msec = Time.get_ticks_msec()
 	_clicks = 0
 	_hit.clear()
+	_log_lines.clear()
 
 
 func reset_session() -> void:
@@ -35,6 +37,7 @@ func reset_session() -> void:
 	_session_start_msec = Time.get_ticks_msec()
 	_clicks = 0
 	_hit.clear()
+	_log_lines.clear()
 
 
 func sync_from_save(state: Node) -> void:
@@ -102,10 +105,24 @@ func _check_money_milestones(state: Node) -> void:
 func _log(label: String, state: Node) -> void:
 	var elapsed_sec := (Time.get_ticks_msec() - _session_start_msec) / 1000.0
 	var loc_rate := _effective_loc_per_sec(state)
-	print(
-		"[MILESTONE] %s at %s (clicks: %d, loc/s: %s)"
-		% [label, _format_elapsed(elapsed_sec), _clicks, _format_loc_rate(loc_rate)]
-	)
+	var line := "[MILESTONE] %s at %s (clicks: %d, loc/s: %s)" % [
+		label,
+		_format_elapsed(elapsed_sec),
+		_clicks,
+		_format_loc_rate(loc_rate),
+	]
+	print(line)
+	_log_lines.append(line)
+
+
+func get_log_text() -> String:
+	if _log_lines.is_empty():
+		return "Поки немає віх. Грай далі — дані з'являться."
+	return "\n".join(_log_lines)
+
+
+func has_log() -> bool:
+	return not _log_lines.is_empty()
 
 
 func _effective_loc_per_sec(state: Node) -> float:
