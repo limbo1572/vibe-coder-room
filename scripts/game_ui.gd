@@ -1326,8 +1326,6 @@ func _refresh_stats() -> void:
 	if raw_rate > 0.0 and prod < 0.999:
 		var penalty := (1.0 - prod) * 100.0
 		rate_text += " (−%.0f%% від багів)" % penalty
-	if GameState.prestige_mult > 1.0:
-		rate_text += "  · ×%.1f prestige" % GameState.prestige_mult
 	_rate_label.text = rate_text
 
 	_bugs_label.add_theme_color_override(
@@ -1433,7 +1431,7 @@ func _refresh_bonuses() -> void:
 		if click_add > 0.0:
 			detail += " + %s апгрейди" % GameState.format_num(click_add)
 		if click_mult > 1.0:
-			detail += ", ×%.0f" % click_mult
+			detail += ", ×%.1f кліку" % click_mult
 		detail += ")"
 		click_line += " " + detail
 	_add_bonus_line(click_line, C_TEXT)
@@ -1471,7 +1469,7 @@ func _refresh_bonuses() -> void:
 
 	var prestige: float = b["prestige_mult"]
 	if prestige > 1.0:
-		_add_bonus_line("Престиж: ×%.1f" % prestige, Color("#b44cff"))
+		_add_bonus_line("Престиж (усі дії): ×%.1f" % prestige, Color("#b44cff"))
 
 
 func _add_bonus_line(text: String, color: Color, font_size: int = FONT_BONUS) -> void:
