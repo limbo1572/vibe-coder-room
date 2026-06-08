@@ -654,7 +654,7 @@ func _tick_auto_click(delta: float) -> void:
 func deploy() -> float:
 	if loc <= 0.0:
 		return 0.0
-	var earned := loc * deploy_rate * prestige_mult
+	var earned := loc * deploy_rate * prestige_mult * sqrt(productivity_factor())
 	money += earned
 	loc = 0.0
 	_clamp_stats()
