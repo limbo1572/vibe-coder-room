@@ -39,6 +39,9 @@ var upgrade_owned: Dictionary = {}
 var skill_owned: Dictionary = {}
 
 var global_loc_mult: float = 1.0
+var click_mult_add: float = 0.0
+var sec_mult_add: float = 0.0
+var deploy_mult_add: float = 0.0
 var upgrade_cost_mult: float = 1.0
 var bug_rate_mult: float = 1.0
 var bug_growth_mult: float = 1.0
@@ -137,9 +140,18 @@ func recalculate_stats() -> void:
 
 	_apply_skill_stat_modifiers()
 
+	loc_per_click *= (1.0 + click_mult_add)
+	loc_per_sec *= (1.0 + sec_mult_add)
+	deploy_rate *= (1.0 + deploy_mult_add)
+	loc_per_click *= global_loc_mult
+	loc_per_sec *= global_loc_mult
+
 
 func _reset_skill_modifiers() -> void:
 	global_loc_mult = 1.0
+	click_mult_add = 0.0
+	sec_mult_add = 0.0
+	deploy_mult_add = 0.0
 	upgrade_cost_mult = 1.0
 	bug_rate_mult = 1.0
 	bug_growth_mult = 1.0
@@ -166,11 +178,11 @@ func _apply_skill_stat_modifiers() -> void:
 				PrestigeTree.EffectType.PRESTIGE_START_MONEY:
 					prestige_start_money = maxf(prestige_start_money, value)
 				PrestigeTree.EffectType.LOC_CLICK_MULT:
-					loc_per_click *= value
+					click_mult_add += (value - 1.0)
 				PrestigeTree.EffectType.LOC_SEC_MULT:
-					loc_per_sec *= value
+					sec_mult_add += (value - 1.0)
 				PrestigeTree.EffectType.DEPLOY_RATE_MULT:
-					deploy_rate *= value
+					deploy_mult_add += (value - 1.0)
 				PrestigeTree.EffectType.QA_POWER_MULT:
 					qa_power *= value
 				PrestigeTree.EffectType.BUG_RATE_MULT:
@@ -576,7 +588,7 @@ func _apply_passive_for_elapsed(elapsed: float) -> Dictionary:
 	var changed := false
 	if loc_per_sec > 0.0:
 		var prod := productivity_factor()
-		var loc_gain := loc_per_sec * prestige_mult * prod * global_loc_mult * elapsed
+		var loc_gain := loc_per_sec * prestige_mult * prod * elapsed
 		if loc_gain > 0.0:
 			loc += loc_gain
 			var bug_add := loc_gain * BUG_RATE_PASSIVE * bug_growth_mult * bug_rate_mult
@@ -619,7 +631,7 @@ func complete_hello_world(with_bug: bool = false) -> void:
 func click_code() -> float:
 	if not click_unlocked:
 		return 0.0
-	var gain := loc_per_click * prestige_mult * productivity_factor() * global_loc_mult
+	var gain := loc_per_click * prestige_mult * productivity_factor()
 	loc += gain
 	bugs += gain * BUG_RATE_CLICK * bug_growth_mult * bug_rate_mult
 	_clamp_stats()
