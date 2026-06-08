@@ -1,0 +1,19 @@
+# Godot 4
+.godot/
+
+# Web export output (rebuild: Godot → Export → Web → build/web/index.html)
+/build/web/*
+!/build/web/serve.py
+/build/*.zip
+/export/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Secrets
+.env
+butler_creds

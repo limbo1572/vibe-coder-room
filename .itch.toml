@@ -1,0 +1,8 @@
+# itch.io — Vibe Coder Tycoon (limbo1572)
+
+[publish]
+project = "limbo1572/vibe-coder-tycoon"
+
+[build]
+path = "build/web"
+channel = "html"
