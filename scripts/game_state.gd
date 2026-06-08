@@ -45,8 +45,7 @@ var click_mult_add: float = 0.0
 var sec_mult_add: float = 0.0
 var deploy_mult_add: float = 0.0
 var upgrade_cost_mult: float = 1.0
-var bug_rate_mult: float = 1.0
-var bug_growth_mult: float = 1.0
+var bug_mult: float = 1.0
 var skill_productivity_mult: float = 1.0
 var skill_productivity_floor: float = 0.1
 var prestige_start_money: float = 0.0
@@ -156,8 +155,7 @@ func _reset_skill_modifiers() -> void:
 	sec_mult_add = 0.0
 	deploy_mult_add = 0.0
 	upgrade_cost_mult = 1.0
-	bug_rate_mult = 1.0
-	bug_growth_mult = 1.0
+	bug_mult = 1.0
 	skill_productivity_mult = 1.0
 	skill_productivity_floor = 0.1
 	prestige_start_money = 0.0
@@ -189,9 +187,9 @@ func _apply_skill_stat_modifiers() -> void:
 				PrestigeTree.EffectType.QA_POWER_MULT:
 					qa_power *= value
 				PrestigeTree.EffectType.BUG_RATE_MULT:
-					bug_rate_mult *= value
+					bug_mult *= value
 				PrestigeTree.EffectType.BUG_GROWTH_MULT:
-					bug_growth_mult *= value
+					bug_mult *= value
 				PrestigeTree.EffectType.PRODUCTIVITY_MULT:
 					skill_productivity_mult *= value
 				PrestigeTree.EffectType.PRODUCTIVITY_FLOOR:
@@ -601,7 +599,7 @@ func _apply_passive_for_elapsed(elapsed: float) -> Dictionary:
 		var loc_gain := loc_per_sec * prestige_mult * prod * elapsed
 		if loc_gain > 0.0:
 			loc += loc_gain
-			var bug_add := loc_gain * BUG_RATE_PASSIVE * bug_growth_mult * bug_rate_mult
+			var bug_add := loc_gain * BUG_RATE_PASSIVE * bug_mult
 			bugs += bug_add
 			result.loc = loc_gain
 			result.bugs_added = bug_add
@@ -643,7 +641,7 @@ func click_code() -> float:
 		return 0.0
 	var gain := loc_per_click * prestige_mult * productivity_factor()
 	loc += gain
-	bugs += gain * BUG_RATE_CLICK * bug_growth_mult * bug_rate_mult
+	bugs += gain * BUG_RATE_CLICK * bug_mult
 	_clamp_stats()
 	if _milestone_logger != null and gain > 0.0:
 		_milestone_logger.record_click()
