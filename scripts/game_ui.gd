@@ -636,6 +636,8 @@ func _build_prestige_tree_menu(root: Control) -> void:
 
 	if GameState.DEBUG_CHEATS:
 		_add_prestige_tree_tester_row(outer)
+	if GameState.MEASURE_MODE:
+		_add_milestone_log_row(outer)
 
 
 func _build_achievements_menu(root: Control) -> void:
@@ -720,6 +722,8 @@ func _add_prestige_tree_tester_row(outer: VBoxContainer) -> void:
 	)
 	row.add_child(grant_btn)
 
+
+func _add_milestone_log_row(outer: VBoxContainer) -> void:
 	var data_title := Label.new()
 	data_title.text = "Дані тесту (скинь розробнику):"
 	data_title.add_theme_color_override("font_color", C_MUTED)
