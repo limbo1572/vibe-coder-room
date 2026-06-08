@@ -61,27 +61,37 @@ func prestige_text(count: int) -> String:
 func _emit_bug_threshold(level: int) -> void:
 	match level:
 		1:
-			_emit_once(
-				"bug_threshold:1:compiler",
-				"compiler",
-				"warning: 3 unhandled exceptions."
-			)
-			_emit_once(
-				"bug_threshold:1:copilot",
-				"copilot",
-				"Та то фігня, потім глянемо."
-			)
+			_emit_once("bug:1:compiler", "compiler", "warning: 3 unhandled exceptions.")
+			_emit_once("bug:1:copilot", "copilot", "Та то фігня, потім глянемо.")
+			_emit_once("bug:1:code_comment", "code_comment", "// TODO: пофіксити потім")
 		2:
+			_emit_once("bug:2:compiler", "compiler", "warning: technical debt rising.")
+			_emit_once("bug:2:code_comment", "code_comment", "// не чіпай. працює якимось дивом.")
+		3:
 			_emit_once(
-				"bug_threshold:2",
+				"bug:3:compiler",
 				"compiler",
 				"warning: technical debt exceeds maintainable threshold."
 			)
-		3:
+			_emit_once("bug:3:copilot", "copilot", "Все під контролем. Майже все. Дещо.")
 			_emit_once(
-				"bug_threshold:3",
+				"bug:3:code_comment",
+				"code_comment",
+				"// AI написав це о 3 ночі. я не розумію що тут."
+			)
+		4:
+			_emit_once("bug:4:compiler", "compiler", "error: cyclomatic complexity not measurable.")
+			_emit_once("bug:4:code_comment", "code_comment", "// хто це писав. а, я. коли.")
+		5:
+			_emit_once(
+				"bug:5:compiler",
 				"compiler",
 				"stack trace points outside allocated memory. context: unknown."
+			)
+			_emit_once(
+				"bug:5:code_comment",
+				"code_comment",
+				"// тут має бути коментар. його теж згенерували."
 			)
 		_:
 			pass

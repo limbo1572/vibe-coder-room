@@ -96,6 +96,8 @@ var _spam_window_elapsed: float = 0.0
 var _flavor_bug_level_1: bool = false
 var _flavor_bug_level_2: bool = false
 var _flavor_bug_level_3: bool = false
+var _flavor_bug_level_4: bool = false
+var _flavor_bug_level_5: bool = false
 var _captcha_rate_accum: float = 0.0
 var _captcha_clicks_this_sec: int = 0
 var _captcha_sec_elapsed: float = 0.0
@@ -195,12 +197,18 @@ func _check_flavor_bug_thresholds() -> void:
 	if not _flavor_bug_level_1 and prod < 0.95:
 		_flavor_bug_level_1 = true
 		FlavorLines.trigger("bug_threshold", {"level": 1})
-	if not _flavor_bug_level_2 and prod < 0.70:
+	if not _flavor_bug_level_2 and prod < 0.80:
 		_flavor_bug_level_2 = true
 		FlavorLines.trigger("bug_threshold", {"level": 2})
-	if not _flavor_bug_level_3 and prod < 0.40:
+	if not _flavor_bug_level_3 and prod < 0.65:
 		_flavor_bug_level_3 = true
 		FlavorLines.trigger("bug_threshold", {"level": 3})
+	if not _flavor_bug_level_4 and prod < 0.50:
+		_flavor_bug_level_4 = true
+		FlavorLines.trigger("bug_threshold", {"level": 4})
+	if not _flavor_bug_level_5 and prod < 0.35:
+		_flavor_bug_level_5 = true
+		FlavorLines.trigger("bug_threshold", {"level": 5})
 
 
 func _check_flavor_money() -> void:
@@ -932,6 +940,8 @@ func prestige() -> int:
 	_flavor_bug_level_1 = false
 	_flavor_bug_level_2 = false
 	_flavor_bug_level_3 = false
+	_flavor_bug_level_4 = false
+	_flavor_bug_level_5 = false
 	recalculate_stats()
 	money = prestige_start_money
 	prestige_count += 1

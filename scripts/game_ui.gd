@@ -7,6 +7,7 @@ const C_RED := UITheme.C_RED
 const C_PANEL := UITheme.C_PANEL
 const C_MUTED := UITheme.C_MUTED
 const C_TEXT := UITheme.C_TEXT
+const C_CODE_COMMENT := Color("#6a9955")
 
 const FONT_STAT := UITheme.FONT_STAT
 const FONT_UPGRADE_NAME := UITheme.FONT_UPGRADE_NAME
@@ -93,6 +94,8 @@ var _achievements_list: VBoxContainer
 var _prestige_tree_open_points: int = -1
 var _prestige_tree_open_skills: int = -1
 var _captcha_overlay: Control
+var _flavor_queue: Array[Dictionary] = []
+var _flavor_showing: bool = false
 
 
 func _ready() -> void:
@@ -1022,7 +1025,21 @@ func _on_achievement_unlocked(_id: String, def: Dictionary) -> void:
 
 
 func _on_flavor_triggered(line: Dictionary) -> void:
+	_flavor_queue.append(line)
+	_process_flavor_queue()
+
+
+func _process_flavor_queue() -> void:
+	if _flavor_showing or _flavor_queue.is_empty():
+		return
+	_flavor_showing = true
+	var line: Dictionary = _flavor_queue.pop_front()
 	_show_flavor_banner(line)
+	var t := get_tree().create_timer(0.8)
+	t.timeout.connect(func() -> void:
+		_flavor_showing = false
+		_process_flavor_queue()
+	)
 
 
 func _on_captcha_triggered() -> void:
@@ -1154,6 +1171,11 @@ func _show_flavor_banner(line: Dictionary) -> void:
 		style.border_color = Color(C_MUTED, 0.75)
 		label.text = "> %s" % text
 		label.add_theme_color_override("font_color", Color("#cc8866"))
+		label.add_theme_font_override("font", MONO_FONT)
+	elif voice == "code_comment":
+		style.border_color = Color(C_CODE_COMMENT, 0.6)
+		label.text = text
+		label.add_theme_color_override("font_color", C_CODE_COMMENT)
 		label.add_theme_font_override("font", MONO_FONT)
 	else:
 		style.border_color = Color(C_CYAN, 0.65)
