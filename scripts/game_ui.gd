@@ -858,6 +858,13 @@ func _build_debug_skill_panel(root: Control) -> void:
 	title.add_theme_font_size_override("font_size", 14)
 	column.add_child(title)
 
+	var help := Label.new()
+	help.text = "Тестове меню (зникне в релізі). +10 — безкоштовні очки престижу, кнопки скілів — миттєва купівля для перевірки. Хочеш чесну гру — не тисни. Дані тесту й кнопка копіювання — всередині 'Refactor tree'."
+	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	help.add_theme_color_override("font_color", Color("#ffcc88"))
+	help.add_theme_font_size_override("font_size", 12)
+	column.add_child(help)
+
 	_debug_skill_status = Label.new()
 	_debug_skill_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_debug_skill_status.add_theme_color_override("font_color", C_MUTED)
