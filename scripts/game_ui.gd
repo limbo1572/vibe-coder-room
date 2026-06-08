@@ -84,6 +84,12 @@ var _passive_popup_timer: float = 0.0
 var _debug_skill_panel: PanelContainer
 var _debug_skill_status: Label
 var _milestone_log_label: Label
+var _achievements_button: Button
+var _achievements_overlay: Control
+var _achievements_title_label: Label
+var _achievements_list: VBoxContainer
+var _prestige_tree_open_points: int = -1
+var _prestige_tree_open_skills: int = -1
 
 
 func _ready() -> void:
@@ -92,6 +98,7 @@ func _ready() -> void:
 	_build_reset_dialog()
 	GameState.stats_changed.connect(_refresh_all)
 	GameState.passive_gain.connect(_on_passive_gain)
+	Achievements.achievement_unlocked.connect(_on_achievement_unlocked)
 	_refresh_all()
 	call_deferred("_show_offline_popup_if_needed")
 
@@ -168,6 +175,7 @@ func _build_ui() -> void:
 	_build_bottom_bar(root)
 	_build_reset_button(root)
 	_build_prestige_tree_menu(root)
+	_build_achievements_menu(root)
 	if GameState.TESTER_MODE:
 		_build_debug_skill_panel(root)
 
@@ -212,6 +220,14 @@ func _build_top_bar(root: Control) -> void:
 	UITheme.style_button(_prestige_tree_button, C_PRESTIGE)
 	_prestige_tree_button.pressed.connect(_open_prestige_tree)
 	column.add_child(_prestige_tree_button)
+
+	_achievements_button = Button.new()
+	_achievements_button.text = "🏆 Досягнення"
+	_achievements_button.custom_minimum_size = Vector2(0, 40)
+	_achievements_button.visible = false
+	UITheme.style_button(_achievements_button, C_CYAN)
+	_achievements_button.pressed.connect(_open_achievements)
+	column.add_child(_achievements_button)
 
 
 func _build_onboarding_panel(root: Control) -> void:
@@ -619,6 +635,67 @@ func _build_prestige_tree_menu(root: Control) -> void:
 		_add_prestige_tree_tester_row(outer)
 
 
+func _build_achievements_menu(root: Control) -> void:
+	var overlay := Control.new()
+	_achievements_overlay = overlay
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.visible = false
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.0, 0.0, 0.0, 0.62)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.gui_input.connect(_on_achievements_dim_input)
+	overlay.add_child(dim)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(720, 620)
+	panel.offset_left = -360.0
+	panel.offset_top = -310.0
+	panel.offset_right = 360.0
+	panel.offset_bottom = 310.0
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	UITheme.apply_panel_style(panel)
+	var panel_style := panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if panel_style != null:
+		panel_style.border_color = Color(C_CYAN, 0.55)
+	overlay.add_child(panel)
+
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 10)
+	panel.add_child(outer)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	outer.add_child(header)
+
+	_achievements_title_label = Label.new()
+	_achievements_title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_achievements_title_label.add_theme_color_override("font_color", C_CYAN)
+	_achievements_title_label.add_theme_font_size_override("font_size", 24)
+	header.add_child(_achievements_title_label)
+
+	var close_btn := Button.new()
+	close_btn.text = "✕"
+	close_btn.custom_minimum_size = Vector2(40, 36)
+	UITheme.style_button(close_btn, C_MUTED)
+	close_btn.pressed.connect(_close_achievements)
+	header.add_child(close_btn)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(scroll)
+
+	_achievements_list = VBoxContainer.new()
+	_achievements_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_achievements_list.add_theme_constant_override("separation", 8)
+	scroll.add_child(_achievements_list)
+
+
 func _add_prestige_tree_tester_row(outer: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
@@ -767,13 +844,167 @@ func _skill_lock_text(def: Dictionary) -> String:
 func _open_prestige_tree() -> void:
 	if _prestige_tree_overlay == null:
 		return
+	_prestige_tree_open_points = GameState.prestige_points
+	_prestige_tree_open_skills = _count_owned_skills()
 	_refresh_prestige_tree()
 	_prestige_tree_overlay.visible = true
 
 
 func _close_prestige_tree() -> void:
-	if _prestige_tree_overlay != null:
-		_prestige_tree_overlay.visible = false
+	if _prestige_tree_overlay == null:
+		return
+	if _prestige_tree_open_points >= 0:
+		if (
+			GameState.prestige_points == _prestige_tree_open_points
+			and _count_owned_skills() == _prestige_tree_open_skills
+		):
+			Achievements.unlock_by_event("just_looking")
+	_prestige_tree_open_points = -1
+	_prestige_tree_open_skills = -1
+	_prestige_tree_overlay.visible = false
+
+
+func _count_owned_skills() -> int:
+	var count := 0
+	for skill_id: String in GameState.skill_owned:
+		if GameState.has_skill(skill_id):
+			count += 1
+	return count
+
+
+func _open_achievements() -> void:
+	if _achievements_overlay == null:
+		return
+	_refresh_achievements_panel()
+	_achievements_overlay.visible = true
+
+
+func _close_achievements() -> void:
+	if _achievements_overlay != null:
+		_achievements_overlay.visible = false
+
+
+func _on_achievements_dim_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			_close_achievements()
+
+
+func _refresh_achievements_button() -> void:
+	if _achievements_button == null:
+		return
+	var unlocked := Achievements.get_unlocked_count()
+	var total := Achievements.get_total_count()
+	_achievements_button.text = "🏆 Досягнення %d/%d" % [unlocked, total]
+
+
+func _refresh_achievements_panel() -> void:
+	if _achievements_list == null:
+		return
+	var unlocked := Achievements.get_unlocked_count()
+	var total := Achievements.get_total_count()
+	if _achievements_title_label != null:
+		_achievements_title_label.text = "Досягнення %d/%d" % [unlocked, total]
+
+	for child in _achievements_list.get_children():
+		child.queue_free()
+
+	for def: Dictionary in Achievements.DEFS:
+		_achievements_list.add_child(_create_achievement_row(def))
+
+	_refresh_achievements_button()
+
+
+func _create_achievement_row(def: Dictionary) -> PanelContainer:
+	var id: String = def["id"]
+	var is_unlocked := Achievements.is_unlocked(id)
+	var is_hidden := bool(def.get("hidden", false))
+
+	var row := PanelContainer.new()
+	var row_style := StyleBoxFlat.new()
+	row_style.bg_color = Color(0.12, 0.09, 0.18, 0.95)
+	row_style.set_corner_radius_all(6)
+	row_style.set_border_width_all(1)
+	row_style.border_color = Color(C_CYAN, 0.35 if is_unlocked else 0.12)
+	row_style.content_margin_left = 12
+	row_style.content_margin_right = 12
+	row_style.content_margin_top = 8
+	row_style.content_margin_bottom = 8
+	row.add_theme_stylebox_override("panel", row_style)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	row.add_child(box)
+
+	var name := Label.new()
+	var desc := Label.new()
+	name.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
+	desc.add_theme_font_size_override("font_size", FONT_MEME)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+	if is_unlocked:
+		name.text = def["name"]
+		desc.text = def["desc"]
+		name.add_theme_color_override("font_color", C_CYAN)
+		desc.add_theme_color_override("font_color", C_TEXT)
+	elif is_hidden:
+		name.text = "???"
+		desc.text = "Прихована ачівка"
+		name.add_theme_color_override("font_color", C_MUTED)
+		desc.add_theme_color_override("font_color", C_MUTED)
+	else:
+		name.text = def["name"]
+		desc.text = def["desc"]
+		name.add_theme_color_override("font_color", C_MUTED)
+		desc.add_theme_color_override("font_color", C_MUTED)
+
+	box.add_child(name)
+	box.add_child(desc)
+	return row
+
+
+func _on_achievement_unlocked(_id: String, def: Dictionary) -> void:
+	_refresh_achievements_button()
+	if _achievements_overlay != null and _achievements_overlay.visible:
+		_refresh_achievements_panel()
+	_show_achievement_toast(str(def.get("name", "")))
+
+
+func _show_achievement_toast(achievement_name: String) -> void:
+	if _popup_layer == null or achievement_name.is_empty():
+		return
+
+	var banner := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(C_PANEL, 0.95)
+	style.set_corner_radius_all(8)
+	style.set_border_width_all(1)
+	style.border_color = Color(C_CYAN, 0.65)
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	banner.add_theme_stylebox_override("panel", style)
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var label := Label.new()
+	label.text = "🏆 Досягнення: %s" % achievement_name
+	label.add_theme_color_override("font_color", C_CYAN)
+	label.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
+	banner.add_child(label)
+
+	banner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	banner.offset_left = -360.0
+	banner.offset_top = 16.0
+	banner.offset_right = -16.0
+	banner.offset_bottom = 56.0
+	_popup_layer.add_child(banner)
+
+	var tween := create_tween()
+	tween.tween_interval(2.5)
+	tween.tween_property(banner, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(banner.queue_free)
 
 
 func _on_prestige_tree_dim_input(event: InputEvent) -> void:
@@ -1056,6 +1287,10 @@ func _refresh_stats() -> void:
 	if _prestige_tree_button != null:
 		_prestige_tree_button.visible = GameState.click_unlocked
 		_prestige_tree_button.text = "🌳 Refactor tree · %d pts" % GameState.prestige_points
+
+	_refresh_achievements_button()
+	if _achievements_button != null:
+		_achievements_button.visible = GameState.click_unlocked
 
 
 func _refresh_upgrades() -> void:

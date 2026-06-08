@@ -101,6 +101,42 @@ const DEFS: Array[Dictionary] = [
 		"desc": "Ми все бачили. Засуджуємо. Трохи.",
 		"hidden": false,
 	},
+	{
+		"id": "friday_deploy",
+		"name": "Деплой у пʼятницю",
+		"desc": "Що могло піти не так.",
+		"hidden": false,
+	},
+	{
+		"id": "perfectionist",
+		"name": "Перфекціоніст",
+		"desc": "Підозріло чисто. Ти точно щось приховуєш.",
+		"hidden": true,
+	},
+	{
+		"id": "spam_machine",
+		"name": "Спам-машина",
+		"desc": "Ми бачимо тебе. І твій autoclicker.",
+		"hidden": false,
+	},
+	{
+		"id": "near_prestige",
+		"name": "Один клік від престижу",
+		"desc": "Боїшся? Правильно.",
+		"hidden": true,
+	},
+	{
+		"id": "afk_return",
+		"name": "Повернення блудного сина",
+		"desc": "Код сумував. Брехня, не сумував.",
+		"hidden": true,
+	},
+	{
+		"id": "just_looking",
+		"name": "Я просто подивлюсь",
+		"desc": "Window shopping для бідних.",
+		"hidden": false,
+	},
 ]
 
 var unlocked: Dictionary = {}
@@ -119,10 +155,46 @@ func _check_all() -> void:
 			continue
 		if not _is_unlocked(id):
 			continue
-		unlocked[id] = true
-		achievement_unlocked.emit(id, def)
-		save_unlocked()
-		print("[ACHIEVEMENT] %s" % id)
+		_unlock(id, def)
+
+
+func unlock_by_event(id: String) -> void:
+	if unlocked.get(id, false):
+		return
+	var def := find_def(id)
+	if def.is_empty():
+		return
+	_unlock(id, def)
+
+
+func _unlock(id: String, def: Dictionary) -> void:
+	unlocked[id] = true
+	achievement_unlocked.emit(id, def)
+	save_unlocked()
+	print("[ACHIEVEMENT] %s" % id)
+
+
+func find_def(id: String) -> Dictionary:
+	for def: Dictionary in DEFS:
+		if def["id"] == id:
+			return def
+	return {}
+
+
+func get_unlocked_count() -> int:
+	var count := 0
+	for def: Dictionary in DEFS:
+		if unlocked.get(def["id"], false):
+			count += 1
+	return count
+
+
+func get_total_count() -> int:
+	return DEFS.size()
+
+
+func is_unlocked(id: String) -> bool:
+	return bool(unlocked.get(id, false))
 
 
 func _is_unlocked(id: String) -> bool:
@@ -164,6 +236,18 @@ func _is_unlocked(id: String) -> bool:
 			return gs.prestige_points >= 1 and not gs.used_cheats
 		"cheater":
 			return gs.used_cheats
+		"friday_deploy":
+			return gs.friday_deploy
+		"perfectionist":
+			return gs.zero_bug_streak >= 60.0
+		"spam_machine":
+			return gs.spam_detected
+		"near_prestige":
+			return gs.near_prestige
+		"afk_return":
+			return gs.afk_return
+		"just_looking":
+			return false
 		_:
 			return false
 

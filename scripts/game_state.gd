@@ -9,7 +9,7 @@ signal stats_changed
 signal passive_gain(loc_gain: float)
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SAVE_VERSION := 7
+const CURRENT_SAVE_VERSION := 8
 const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
 const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
 const AUTOSAVE_SEC := 10.0
@@ -66,6 +66,13 @@ var passive_loc_earned: float = 0.0
 var max_loc_per_sec_seen: float = 0.0
 var deployed_low_prod: bool = false
 
+var friday_deploy: bool = false
+var zero_bug_streak: float = 0.0
+var spam_detected: bool = false
+var near_prestige_time: float = 0.0
+var near_prestige: bool = false
+var afk_return: bool = false
+
 var last_tick_time: float = 0.0
 var total_play_time: float = 0.0  # сумарний активний ігровий час, сек
 
@@ -73,6 +80,8 @@ var _autosave_timer: Timer
 var _offline_summary: Dictionary = {}
 var _auto_click_timer: float = 0.0
 var _ui_refresh_accum: float = 0.0
+var _spam_clicks_in_window: int = 0
+var _spam_window_elapsed: float = 0.0
 var _milestone_logger: ProgressMilestoneLogger
 
 
@@ -102,11 +111,37 @@ func get_milestone_log() -> String:
 
 func _process(delta: float) -> void:
 	tick_passive_realtime()
+	_tick_achievement_timers(delta)
 	_ui_refresh_accum += delta
 	if _ui_refresh_accum >= UI_REFRESH_INTERVAL:
 		_ui_refresh_accum = 0.0
 		stats_changed.emit()
 	_tick_auto_click(delta)
+
+
+func _tick_achievement_timers(delta: float) -> void:
+	if bugs < 1.0:
+		zero_bug_streak += delta
+	else:
+		zero_bug_streak = 0.0
+
+	if can_prestige():
+		near_prestige_time += delta
+		if near_prestige_time >= 600.0:
+			near_prestige = true
+	else:
+		near_prestige_time = 0.0
+
+	_spam_window_elapsed += delta
+	if _spam_window_elapsed >= 1.0:
+		_spam_window_elapsed = 0.0
+		_spam_clicks_in_window = 0
+
+
+func _record_click_for_spam() -> void:
+	_spam_clicks_in_window += 1
+	if _spam_clicks_in_window >= 20:
+		spam_detected = true
 
 
 func _notification(what: int) -> void:
@@ -424,6 +459,12 @@ func save_game() -> void:
 		"passive_loc_earned": passive_loc_earned,
 		"max_loc_per_sec_seen": max_loc_per_sec_seen,
 		"deployed_low_prod": deployed_low_prod,
+		"friday_deploy": friday_deploy,
+		"zero_bug_streak": zero_bug_streak,
+		"spam_detected": spam_detected,
+		"near_prestige_time": near_prestige_time,
+		"near_prestige": near_prestige,
+		"afk_return": afk_return,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -485,6 +526,12 @@ func load_game() -> bool:
 	passive_loc_earned = float(data.get("passive_loc_earned", 0.0))
 	max_loc_per_sec_seen = float(data.get("max_loc_per_sec_seen", 0.0))
 	deployed_low_prod = bool(data.get("deployed_low_prod", false))
+	friday_deploy = bool(data.get("friday_deploy", false))
+	zero_bug_streak = float(data.get("zero_bug_streak", 0.0))
+	spam_detected = bool(data.get("spam_detected", false))
+	near_prestige_time = float(data.get("near_prestige_time", 0.0))
+	near_prestige = bool(data.get("near_prestige", false))
+	afk_return = bool(data.get("afk_return", false))
 
 	upgrade_owned.clear()
 	var owned_raw: Variant = data.get("upgrade_owned", {})
@@ -505,6 +552,10 @@ func load_game() -> bool:
 	_clamp_stats()
 
 	var saved_tick := float(data.get("last_tick_time", 0.0))
+	if saved_tick > 0.0:
+		var offline_gap := now - saved_tick
+		if offline_gap >= 172800.0:
+			afk_return = true
 	if saved_tick > 0.0 and offline_progress_enabled:
 		var elapsed := minf(now - saved_tick, OFFLINE_CAP_SEC)
 		if elapsed > 0.0:
@@ -537,6 +588,14 @@ func _apply_default_state() -> void:
 	passive_loc_earned = 0.0
 	max_loc_per_sec_seen = 0.0
 	deployed_low_prod = false
+	friday_deploy = false
+	zero_bug_streak = 0.0
+	spam_detected = false
+	near_prestige_time = 0.0
+	near_prestige = false
+	afk_return = false
+	_spam_clicks_in_window = 0
+	_spam_window_elapsed = 0.0
 	upgrade_owned.clear()
 	skill_owned.clear()
 	_offline_summary = {}
@@ -693,6 +752,7 @@ func click_code() -> float:
 	if _milestone_logger != null and gain > 0.0:
 		_milestone_logger.record_click()
 	total_clicks += 1
+	_record_click_for_spam()
 	stats_changed.emit()
 	return gain
 
@@ -712,6 +772,9 @@ func deploy() -> float:
 		return 0.0
 	if productivity_factor() < 0.3:
 		deployed_low_prod = true
+	var dt := Time.get_datetime_dict_from_system()
+	if int(dt.get("weekday", 0)) == 5 and int(dt.get("hour", 0)) >= 17:
+		friday_deploy = true
 	var earned := loc * deploy_rate * prestige_mult * sqrt(productivity_factor())
 	money += earned
 	loc = 0.0
