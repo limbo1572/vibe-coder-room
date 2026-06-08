@@ -31,9 +31,9 @@ const DESK_BASE_SORT_Z := 0.05
 const DESK_SCREEN_MODULATE := Color(1.0, 1.0, 1.0, 0.85)
 
 const CODER_TEXTURE_PATH := "res://assets/sprites/coder.png"
-const CODER_SCALE := 0.38
-const CODER_TILE_X := 1.97
-const CODER_TILE_Y := 3.88
+var CODER_SCALE := 0.32
+var CODER_TILE_X := 1.97
+var CODER_TILE_Y := 3.88
 const CODER_TILE_Z := 0.12
 const CODER_SORT_Z := 0.15
 
@@ -98,6 +98,42 @@ func _input(event: InputEvent) -> void:
 				if gain > 0.0 and _game_ui:
 					_game_ui.show_click_popup(mb.position, gain)
 				get_viewport().set_input_as_handled()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not GameState.TESTER_MODE:
+		return
+	if not event is InputEventKey:
+		return
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return
+
+	var changed := false
+	match key_event.keycode:
+		KEY_LEFT:
+			CODER_TILE_X -= 0.02
+			changed = true
+		KEY_RIGHT:
+			CODER_TILE_X += 0.02
+			changed = true
+		KEY_UP:
+			CODER_TILE_Y -= 0.02
+			changed = true
+		KEY_DOWN:
+			CODER_TILE_Y += 0.02
+			changed = true
+		KEY_BRACKETLEFT:
+			CODER_SCALE = maxf(0.01, CODER_SCALE - 0.01)
+			changed = true
+		KEY_BRACKETRIGHT:
+			CODER_SCALE += 0.01
+			changed = true
+
+	if changed:
+		print("CODER x=%.2f y=%.2f scale=%.2f" % [CODER_TILE_X, CODER_TILE_Y, CODER_SCALE])
+		queue_redraw()
+		get_viewport().set_input_as_handled()
 
 
 func _on_viewport_size_changed() -> void:
