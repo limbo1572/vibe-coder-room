@@ -93,6 +93,8 @@ func _try_hit(key: String, label: String, state: Node) -> void:
 
 
 func _check_money_milestones(state: Node) -> void:
+	if not _enabled:
+		return
 	var money := float(state.money)
 	for entry: Dictionary in MONEY_THRESHOLDS:
 		var key: String = entry["key"]
