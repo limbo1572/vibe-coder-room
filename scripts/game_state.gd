@@ -11,6 +11,7 @@ signal passive_gain(loc_gain: float)
 const SAVE_PATH := "user://save.json"
 const CURRENT_SAVE_VERSION := 6
 const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
+const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
 const AUTOSAVE_SEC := 10.0
 const OFFLINE_CAP_SEC := 28800.0  # 8 hours
 
@@ -64,6 +65,7 @@ var total_play_time: float = 0.0  # сумарний активний ігров
 var _autosave_timer: Timer
 var _offline_summary: Dictionary = {}
 var _auto_click_timer: float = 0.0
+var _ui_refresh_accum: float = 0.0
 var _milestone_logger: ProgressMilestoneLogger
 
 
@@ -93,6 +95,10 @@ func get_milestone_log() -> String:
 
 func _process(delta: float) -> void:
 	tick_passive_realtime()
+	_ui_refresh_accum += delta
+	if _ui_refresh_accum >= UI_REFRESH_INTERVAL:
+		_ui_refresh_accum = 0.0
+		stats_changed.emit()
 	_tick_auto_click(delta)
 
 
@@ -625,7 +631,6 @@ func _apply_passive_for_elapsed(elapsed: float) -> Dictionary:
 
 	if changed:
 		_clamp_stats()
-		stats_changed.emit()
 	return result
 
 
