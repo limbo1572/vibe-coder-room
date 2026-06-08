@@ -32,8 +32,8 @@ const DESK_SCREEN_MODULATE := Color(1.0, 1.0, 1.0, 0.85)
 
 const CODER_TEXTURE_PATH := "res://assets/sprites/coder.png"
 const CODER_SCALE := 0.38
-const CODER_TILE_X := 2.35
-const CODER_TILE_Y := 4.55
+const CODER_TILE_X := 2.05
+const CODER_TILE_Y := 4.05
 const CODER_TILE_Z := 0.12
 const CODER_SORT_Z := 0.15
 
