@@ -1424,6 +1424,8 @@ func _refresh_stats() -> void:
 	if raw_rate > 0.0 and prod < 0.999:
 		var penalty := (1.0 - prod) * 100.0
 		rate_text += " (−%.0f%% від багів)" % penalty
+	if GameState.prestige_mult > 1.0:
+		rate_text += "  · ×%.1f prestige" % GameState.prestige_mult
 	_rate_label.text = rate_text
 
 	_bugs_label.add_theme_color_override(
@@ -1584,7 +1586,13 @@ func _on_deploy_pressed() -> void:
 
 
 func _on_prestige_pressed() -> void:
-	_prestige_dialog.dialog_text = FlavorLines.prestige_text(GameState.prestige_count)
+	var flavor := FlavorLines.prestige_text(GameState.prestige_count)
+	var gained := GameState.preview_prestige_points()
+	var cur_mult := GameState.prestige_mult
+	var new_mult := 1.0 + (GameState.prestige_points + gained) * 0.1
+	_prestige_dialog.dialog_text = "%s\n\n+%d refactor pts · множник ×%.1f → ×%.1f (+10%% до всього за очко, назавжди)" % [
+		flavor, gained, cur_mult, new_mult,
+	]
 	_prestige_dialog.popup_centered()
 
 

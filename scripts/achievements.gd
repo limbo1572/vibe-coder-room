@@ -140,14 +140,14 @@ const DEFS: Array[Dictionary] = [
 ]
 
 var unlocked: Dictionary = {}
+var _initial_scan_done: bool = false
 
 
 func _ready() -> void:
 	load_unlocked()
 	GameState.stats_changed.connect(_check_all)
-	# Defer so GameUI can connect to achievement_unlocked before first unlock emit.
-	await get_tree().process_frame
 	_check_all()
+	_initial_scan_done = true
 
 
 func _check_all() -> void:
@@ -171,9 +171,10 @@ func unlock_by_event(id: String) -> void:
 
 func _unlock(id: String, def: Dictionary) -> void:
 	unlocked[id] = true
-	achievement_unlocked.emit(id, def)
 	save_unlocked()
 	print("[ACHIEVEMENT] %s" % id)
+	if _initial_scan_done:
+		achievement_unlocked.emit(id, def)
 
 
 func find_def(id: String) -> Dictionary:
