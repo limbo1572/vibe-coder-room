@@ -37,6 +37,7 @@ var deploy_rate: float = BASE_DEPLOY_RATE
 var qa_power: float = BASE_QA_POWER
 var prestige_mult: float = 1.0
 var prestige_points: int = 0
+var prestige_count: int = 0
 
 var upgrade_owned: Dictionary = {}
 var skill_owned: Dictionary = {}
@@ -82,6 +83,9 @@ var _auto_click_timer: float = 0.0
 var _ui_refresh_accum: float = 0.0
 var _spam_clicks_in_window: int = 0
 var _spam_window_elapsed: float = 0.0
+var _flavor_bug_level_1: bool = false
+var _flavor_bug_level_2: bool = false
+var _flavor_bug_level_3: bool = false
 var _milestone_logger: ProgressMilestoneLogger
 
 
@@ -136,6 +140,35 @@ func _tick_achievement_timers(delta: float) -> void:
 	if _spam_window_elapsed >= 1.0:
 		_spam_window_elapsed = 0.0
 		_spam_clicks_in_window = 0
+
+	_check_flavor_bug_thresholds()
+
+
+func _check_flavor_bug_thresholds() -> void:
+	if bugs < 1.0:
+		return
+	var prod := productivity_factor()
+	if not _flavor_bug_level_1 and prod < 0.95:
+		_flavor_bug_level_1 = true
+		FlavorLines.trigger("bug_threshold", {"level": 1})
+	if not _flavor_bug_level_2 and prod < 0.70:
+		_flavor_bug_level_2 = true
+		FlavorLines.trigger("bug_threshold", {"level": 2})
+	if not _flavor_bug_level_3 and prod < 0.40:
+		_flavor_bug_level_3 = true
+		FlavorLines.trigger("bug_threshold", {"level": 3})
+
+
+func _check_flavor_money() -> void:
+	if money >= 1000.0:
+		FlavorLines.trigger("money_1000")
+
+
+func _total_owned_upgrades() -> int:
+	var total := 0
+	for key: Variant in upgrade_owned:
+		total += int(upgrade_owned[key])
+	return total
 
 
 func _record_click_for_spam() -> void:
@@ -381,6 +414,8 @@ func buy_upgrade(upgrade_id: String, count: int = 1) -> bool:
 	var max_owned := UpgradeCatalog.get_max_owned(def)
 	if owned >= max_owned or owned + count > max_owned:
 		return false
+	var was_first_ever := _total_owned_upgrades() == 0
+	var was_first_of_type := owned == 0
 	var cost := get_bulk_cost(upgrade_id, count)
 	if UpgradeCatalog.costs_loc(def):
 		if loc < cost:
@@ -398,6 +433,11 @@ func buy_upgrade(upgrade_id: String, count: int = 1) -> bool:
 	stats_changed.emit()
 	if _milestone_logger != null:
 		_milestone_logger.on_upgrade_purchased(self)
+	if was_first_ever:
+		FlavorLines.trigger("first_upgrade")
+	if was_first_of_type:
+		FlavorLines.trigger("generator_bought", {"upgrade_id": upgrade_id})
+	_check_flavor_money()
 	return true
 
 
@@ -444,6 +484,7 @@ func save_game() -> void:
 		"bugs": bugs,
 		"deploy_rate": deploy_rate,
 		"prestige_points": prestige_points,
+		"prestige_count": prestige_count,
 		"prestige_mult": prestige_mult,
 		"upgrade_owned": upgrade_owned.duplicate(),
 		"skill_owned": skill_owned.duplicate(),
@@ -507,6 +548,7 @@ func load_game() -> bool:
 	money = float(data.get("money", 0.0))
 	bugs = float(data.get("bugs", 0.0))
 	prestige_points = int(data.get("prestige_points", 0))
+	prestige_count = int(data.get("prestige_count", 0))
 	prestige_mult = float(data.get("prestige_mult", 1.0))
 	total_play_time = float(data.get("total_play_time", 0.0))
 
@@ -577,6 +619,7 @@ func _apply_default_state() -> void:
 	money = 0.0
 	bugs = 0.0
 	prestige_points = 0
+	prestige_count = 0
 	prestige_mult = 1.0
 	click_unlocked = false
 	hello_world_done = false
@@ -783,6 +826,9 @@ func deploy() -> float:
 	stats_changed.emit()
 	if _milestone_logger != null:
 		_milestone_logger.on_deploy(self)
+	if total_deploys == 1:
+		FlavorLines.trigger("first_deploy")
+	_check_flavor_money()
 	return earned
 
 
@@ -808,6 +854,7 @@ func prestige() -> int:
 	upgrade_owned.clear()
 	recalculate_stats()
 	money = prestige_start_money
+	prestige_count += 1
 
 	stats_changed.emit()
 	save_game()

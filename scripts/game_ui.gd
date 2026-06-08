@@ -99,6 +99,7 @@ func _ready() -> void:
 	GameState.stats_changed.connect(_refresh_all)
 	GameState.passive_gain.connect(_on_passive_gain)
 	Achievements.achievement_unlocked.connect(_on_achievement_unlocked)
+	FlavorLines.flavor_triggered.connect(_on_flavor_triggered)
 	_refresh_all()
 	call_deferred("_show_offline_popup_if_needed")
 
@@ -971,6 +972,67 @@ func _on_achievement_unlocked(_id: String, def: Dictionary) -> void:
 	_show_achievement_toast(str(def.get("name", "")))
 
 
+func _on_flavor_triggered(line: Dictionary) -> void:
+	_show_flavor_banner(line)
+
+
+func _show_flavor_banner(line: Dictionary) -> void:
+	if _popup_layer == null:
+		return
+	var voice := str(line.get("voice", ""))
+	var text := str(line.get("text", ""))
+	if text.is_empty():
+		return
+
+	var slot := 0
+	for child in _popup_layer.get_children():
+		if child.has_meta("flavor_banner"):
+			slot += 1
+
+	var banner := PanelContainer.new()
+	banner.set_meta("flavor_banner", true)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(C_PANEL, 0.95)
+	style.set_corner_radius_all(8)
+	style.set_border_width_all(1)
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	banner.add_theme_stylebox_override("panel", style)
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var label := Label.new()
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
+
+	if voice == "compiler":
+		style.border_color = Color(C_MUTED, 0.75)
+		label.text = "> %s" % text
+		label.add_theme_color_override("font_color", Color("#cc8866"))
+		var mono := SystemFont.new()
+		mono.font_names = PackedStringArray(["Consolas", "Courier New", "monospace"])
+		label.add_theme_font_override("font", mono)
+	else:
+		style.border_color = Color(C_CYAN, 0.65)
+		label.text = "🤖 Копілот: %s" % text
+		label.add_theme_color_override("font_color", C_CYAN)
+
+	banner.add_child(label)
+	banner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	var y_off := 16.0 + float(slot) * 52.0
+	banner.offset_left = -360.0
+	banner.offset_top = y_off
+	banner.offset_right = -16.0
+	banner.offset_bottom = y_off + 40.0
+	_popup_layer.add_child(banner)
+
+	var tween := create_tween()
+	tween.tween_interval(2.5)
+	tween.tween_property(banner, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(banner.queue_free)
+
+
 func _show_achievement_toast(achievement_name: String) -> void:
 	if _popup_layer == null or achievement_name.is_empty():
 		return
@@ -1426,9 +1488,7 @@ func _on_deploy_pressed() -> void:
 
 
 func _on_prestige_pressed() -> void:
-	_prestige_dialog.dialog_text = (
-		"Ти видалив усе і почав заново. Цього разу буде чисто. (Не буде.)"
-	)
+	_prestige_dialog.dialog_text = FlavorLines.prestige_text(GameState.prestige_count)
 	_prestige_dialog.popup_centered()
 
 

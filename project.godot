@@ -18,6 +18,7 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 
 GameState="*res://scripts/game_state.gd"
 Achievements="*res://scripts/achievements.gd"
+FlavorLines="*res://scripts/flavor_lines.gd"
 
 [display]
 
