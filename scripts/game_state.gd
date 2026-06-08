@@ -7,6 +7,7 @@ const ProgressMilestoneLogger = preload("res://scripts/progress_milestone_logger
 
 signal stats_changed
 signal passive_gain(loc_gain: float)
+signal captcha_triggered
 
 const SAVE_PATH := "user://save.json"
 const CURRENT_SAVE_VERSION := 8
@@ -14,6 +15,10 @@ const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time acc
 const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
 const AUTOSAVE_SEC := 10.0
 const OFFLINE_CAP_SEC := 28800.0  # 8 hours
+
+const CAPTCHA_CLICKS_PER_SEC := 25
+const CAPTCHA_SUSTAIN_SEC := 3.0
+const CAPTCHA_COOLDOWN_SEC := 60.0
 
 const BUG_RATE_CLICK := 0.05
 const BUG_RATE_PASSIVE := 0.03
@@ -74,6 +79,9 @@ var near_prestige_time: float = 0.0
 var near_prestige: bool = false
 var afk_return: bool = false
 
+var captcha_required: bool = false
+var captcha_count: int = 0
+
 var last_tick_time: float = 0.0
 var total_play_time: float = 0.0  # сумарний активний ігровий час, сек
 
@@ -86,6 +94,10 @@ var _spam_window_elapsed: float = 0.0
 var _flavor_bug_level_1: bool = false
 var _flavor_bug_level_2: bool = false
 var _flavor_bug_level_3: bool = false
+var _captcha_rate_accum: float = 0.0
+var _captcha_clicks_this_sec: int = 0
+var _captcha_sec_elapsed: float = 0.0
+var _captcha_cooldown: float = 0.0
 var _milestone_logger: ProgressMilestoneLogger
 
 
@@ -142,6 +154,36 @@ func _tick_achievement_timers(delta: float) -> void:
 		_spam_clicks_in_window = 0
 
 	_check_flavor_bug_thresholds()
+	_tick_captcha_detection(delta)
+
+
+func _tick_captcha_detection(delta: float) -> void:
+	_captcha_cooldown = maxf(0.0, _captcha_cooldown - delta)
+	_captcha_sec_elapsed += delta
+	if _captcha_sec_elapsed >= 1.0:
+		if _captcha_clicks_this_sec >= CAPTCHA_CLICKS_PER_SEC:
+			_captcha_rate_accum += 1.0
+		else:
+			_captcha_rate_accum = 0.0
+		_captcha_clicks_this_sec = 0
+		_captcha_sec_elapsed = 0.0
+	if (
+		_captcha_rate_accum >= CAPTCHA_SUSTAIN_SEC
+		and not captcha_required
+		and _captcha_cooldown <= 0.0
+	):
+		captcha_required = true
+		captcha_count += 1
+		_captcha_rate_accum = 0.0
+		captcha_triggered.emit()
+
+
+func resolve_captcha() -> void:
+	captcha_required = false
+	_captcha_cooldown = CAPTCHA_COOLDOWN_SEC
+	_captcha_rate_accum = 0.0
+	_captcha_clicks_this_sec = 0
+	stats_changed.emit()
 
 
 func _check_flavor_bug_thresholds() -> void:
@@ -506,6 +548,7 @@ func save_game() -> void:
 		"near_prestige_time": near_prestige_time,
 		"near_prestige": near_prestige,
 		"afk_return": afk_return,
+		"captcha_count": captcha_count,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -574,6 +617,8 @@ func load_game() -> bool:
 	near_prestige_time = float(data.get("near_prestige_time", 0.0))
 	near_prestige = bool(data.get("near_prestige", false))
 	afk_return = bool(data.get("afk_return", false))
+	captcha_count = int(data.get("captcha_count", 0))
+	captcha_required = false
 
 	upgrade_owned.clear()
 	var owned_raw: Variant = data.get("upgrade_owned", {})
@@ -637,6 +682,12 @@ func _apply_default_state() -> void:
 	near_prestige_time = 0.0
 	near_prestige = false
 	afk_return = false
+	captcha_required = false
+	captcha_count = 0
+	_captcha_rate_accum = 0.0
+	_captcha_clicks_this_sec = 0
+	_captcha_sec_elapsed = 0.0
+	_captcha_cooldown = 0.0
 	_spam_clicks_in_window = 0
 	_spam_window_elapsed = 0.0
 	upgrade_owned.clear()
@@ -785,7 +836,9 @@ func complete_hello_world(with_bug: bool = false) -> void:
 	save_game()
 
 
-func click_code() -> float:
+func click_code(is_manual: bool = true) -> float:
+	if is_manual and captcha_required:
+		return 0.0
 	if not click_unlocked:
 		return 0.0
 	var gain := loc_per_click * prestige_mult * productivity_factor()
@@ -795,6 +848,8 @@ func click_code() -> float:
 	if _milestone_logger != null and gain > 0.0:
 		_milestone_logger.record_click()
 	total_clicks += 1
+	if is_manual:
+		_captcha_clicks_this_sec += 1
 	_record_click_for_spam()
 	stats_changed.emit()
 	return gain
@@ -807,7 +862,7 @@ func _tick_auto_click(delta: float) -> void:
 	var interval := 1.0 / auto_click_per_sec
 	while _auto_click_timer >= interval:
 		_auto_click_timer -= interval
-		click_code()
+		click_code(false)
 
 
 func deploy() -> float:

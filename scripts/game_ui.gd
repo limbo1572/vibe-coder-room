@@ -90,6 +90,7 @@ var _achievements_title_label: Label
 var _achievements_list: VBoxContainer
 var _prestige_tree_open_points: int = -1
 var _prestige_tree_open_skills: int = -1
+var _captcha_overlay: Control
 
 
 func _ready() -> void:
@@ -100,6 +101,7 @@ func _ready() -> void:
 	GameState.passive_gain.connect(_on_passive_gain)
 	Achievements.achievement_unlocked.connect(_on_achievement_unlocked)
 	FlavorLines.flavor_triggered.connect(_on_flavor_triggered)
+	GameState.captcha_triggered.connect(_on_captcha_triggered)
 	_refresh_all()
 	call_deferred("_show_offline_popup_if_needed")
 
@@ -974,6 +976,102 @@ func _on_achievement_unlocked(_id: String, def: Dictionary) -> void:
 
 func _on_flavor_triggered(line: Dictionary) -> void:
 	_show_flavor_banner(line)
+
+
+func _on_captcha_triggered() -> void:
+	_show_captcha_modal()
+
+
+func _show_captcha_modal() -> void:
+	if _captcha_overlay != null:
+		_captcha_overlay.visible = true
+		return
+
+	var root := get_child(0) as Control
+	if root == null:
+		return
+
+	var overlay := Control.new()
+	_captcha_overlay = overlay
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(dim)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(480, 240)
+	panel.offset_left = -240.0
+	panel.offset_top = -120.0
+	panel.offset_right = 240.0
+	panel.offset_bottom = 120.0
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.08, 0.06, 0.06, 0.96)
+	panel_style.set_corner_radius_all(6)
+	panel_style.set_border_width_all(1)
+	panel_style.border_color = Color(C_MUTED, 0.75)
+	panel_style.content_margin_left = 16
+	panel_style.content_margin_right = 16
+	panel_style.content_margin_top = 14
+	panel_style.content_margin_bottom = 14
+	panel.add_theme_stylebox_override("panel", panel_style)
+	overlay.add_child(panel)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	panel.add_child(column)
+
+	var mono := SystemFont.new()
+	mono.font_names = PackedStringArray(["Consolas", "Courier New", "monospace"])
+
+	var text := Label.new()
+	text.text = "> ANOMALY DETECTED\n> click rate exceeds human limits\n> are you human?"
+	text.add_theme_color_override("font_color", Color("#cc8866"))
+	text.add_theme_font_size_override("font_size", 15)
+	text.add_theme_font_override("font", mono)
+	column.add_child(text)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_row.add_theme_constant_override("separation", 16)
+	column.add_child(btn_row)
+
+	for _i: int in 2:
+		var btn := Button.new()
+		btn.text = "[ Y ]"
+		btn.custom_minimum_size = Vector2(72, 40)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.add_theme_font_override("font", mono)
+		btn.add_theme_color_override("font_color", Color("#cc8866"))
+		var btn_style := StyleBoxFlat.new()
+		btn_style.bg_color = Color(0.12, 0.10, 0.10, 0.9)
+		btn_style.set_corner_radius_all(4)
+		btn_style.set_border_width_all(1)
+		btn_style.border_color = Color(C_MUTED, 0.6)
+		btn.add_theme_stylebox_override("normal", btn_style)
+		btn.add_theme_stylebox_override("hover", btn_style)
+		btn.add_theme_stylebox_override("pressed", btn_style)
+		btn.pressed.connect(_on_captcha_y_pressed)
+		btn_row.add_child(btn)
+
+	var hint := Label.new()
+	hint.text = "// вибір ілюзорний, як і все тут"
+	hint.add_theme_color_override("font_color", C_MUTED)
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_override("font", mono)
+	column.add_child(hint)
+
+
+func _on_captcha_y_pressed() -> void:
+	GameState.resolve_captcha()
+	if _captcha_overlay != null:
+		_captcha_overlay.visible = false
 
 
 func _show_flavor_banner(line: Dictionary) -> void:
