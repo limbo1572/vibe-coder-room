@@ -16,6 +16,8 @@ const FONT_CATEGORY := UITheme.FONT_CATEGORY
 const FONT_BONUS := UITheme.FONT_BONUS
 const FONT_BONUS_SMALL := UITheme.FONT_BONUS_SMALL
 
+const MONO_FONT := preload("res://assets/fonts/JetBrainsMono-Regular.ttf")
+
 const UPGRADE_PANEL_WIDTH := 340.0
 const UPGRADE_PANEL_MARGIN := 16.0
 
@@ -1072,8 +1074,7 @@ func _show_captcha_modal() -> void:
 	column.add_theme_constant_override("separation", 12)
 	panel.add_child(column)
 
-	var mono := SystemFont.new()
-	mono.font_names = PackedStringArray(["Consolas", "Courier New", "monospace"])
+	var mono := MONO_FONT
 
 	var text := Label.new()
 	text.text = "> ANOMALY DETECTED\n> click rate exceeds human limits\n> are you human?"
@@ -1153,9 +1154,7 @@ func _show_flavor_banner(line: Dictionary) -> void:
 		style.border_color = Color(C_MUTED, 0.75)
 		label.text = "> %s" % text
 		label.add_theme_color_override("font_color", Color("#cc8866"))
-		var mono := SystemFont.new()
-		mono.font_names = PackedStringArray(["Consolas", "Courier New", "monospace"])
-		label.add_theme_font_override("font", mono)
+		label.add_theme_font_override("font", MONO_FONT)
 	else:
 		style.border_color = Color(C_CYAN, 0.65)
 		label.text = "🤖 Копілот: %s" % text
