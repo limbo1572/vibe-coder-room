@@ -892,7 +892,7 @@ func _on_debug_skill_pressed(entry: Dictionary) -> void:
 		"grant_10":
 			GameState.grant_prestige_points(10)
 		"buy":
-			GameState.buy_skill(entry["id"])
+			GameState.debug_buy_skill(entry["id"])
 	_refresh_debug_skill_panel()
 
 

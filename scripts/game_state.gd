@@ -9,7 +9,7 @@ signal stats_changed
 signal passive_gain(loc_gain: float)
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SAVE_VERSION := 6
+const CURRENT_SAVE_VERSION := 7
 const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
 const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
 const AUTOSAVE_SEC := 10.0
@@ -58,6 +58,13 @@ var click_unlocked: bool = false
 var hello_world_done: bool = false
 var hello_world_with_bug: bool = false
 var hello_world_hint_seen: bool = false
+
+var total_clicks: int = 0
+var total_deploys: int = 0
+var used_cheats: bool = false
+var passive_loc_earned: float = 0.0
+var max_loc_per_sec_seen: float = 0.0
+var deployed_low_prod: bool = false
 
 var last_tick_time: float = 0.0
 var total_play_time: float = 0.0  # сумарний активний ігровий час, сек
@@ -159,6 +166,7 @@ func recalculate_stats() -> void:
 	deploy_rate *= (1.0 + deploy_mult_add)
 	loc_per_click *= global_loc_mult
 	loc_per_sec *= global_loc_mult
+	max_loc_per_sec_seen = maxf(max_loc_per_sec_seen, loc_per_sec)
 
 
 func _reset_skill_modifiers() -> void:
@@ -246,11 +254,19 @@ func buy_skill(skill_id: String) -> bool:
 	return true
 
 
+func debug_buy_skill(skill_id: String) -> bool:
+	if not TESTER_MODE:
+		return false
+	used_cheats = true
+	return buy_skill(skill_id)
+
+
 func grant_prestige_points(amount: int) -> void:
 	if not TESTER_MODE:
 		return
 	if amount <= 0:
 		return
+	used_cheats = true
 	prestige_points += amount
 	save_game()
 	stats_changed.emit()
@@ -402,6 +418,12 @@ func save_game() -> void:
 		"hello_world_done": hello_world_done,
 		"hello_world_with_bug": hello_world_with_bug,
 		"hello_world_hint_seen": hello_world_hint_seen,
+		"total_clicks": total_clicks,
+		"total_deploys": total_deploys,
+		"used_cheats": used_cheats,
+		"passive_loc_earned": passive_loc_earned,
+		"max_loc_per_sec_seen": max_loc_per_sec_seen,
+		"deployed_low_prod": deployed_low_prod,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -457,6 +479,13 @@ func load_game() -> bool:
 		hello_world_with_bug = bool(data.get("hello_world_with_bug", false))
 		hello_world_hint_seen = bool(data.get("hello_world_hint_seen", false))
 
+	total_clicks = int(data.get("total_clicks", 0))
+	total_deploys = int(data.get("total_deploys", 0))
+	used_cheats = bool(data.get("used_cheats", false))
+	passive_loc_earned = float(data.get("passive_loc_earned", 0.0))
+	max_loc_per_sec_seen = float(data.get("max_loc_per_sec_seen", 0.0))
+	deployed_low_prod = bool(data.get("deployed_low_prod", false))
+
 	upgrade_owned.clear()
 	var owned_raw: Variant = data.get("upgrade_owned", {})
 	if typeof(owned_raw) == TYPE_DICTIONARY:
@@ -502,6 +531,12 @@ func _apply_default_state() -> void:
 	hello_world_done = false
 	hello_world_with_bug = false
 	hello_world_hint_seen = false
+	total_clicks = 0
+	total_deploys = 0
+	used_cheats = false
+	passive_loc_earned = 0.0
+	max_loc_per_sec_seen = 0.0
+	deployed_low_prod = false
 	upgrade_owned.clear()
 	skill_owned.clear()
 	_offline_summary = {}
@@ -611,6 +646,7 @@ func _apply_passive_for_elapsed(elapsed: float) -> Dictionary:
 		var loc_gain := loc_per_sec * prestige_mult * prod * elapsed
 		if loc_gain > 0.0:
 			loc += loc_gain
+			passive_loc_earned += loc_gain
 			var bug_add := loc_gain * BUG_RATE_PASSIVE * bug_mult
 			bugs += bug_add
 			result.loc = loc_gain
@@ -656,6 +692,7 @@ func click_code() -> float:
 	_clamp_stats()
 	if _milestone_logger != null and gain > 0.0:
 		_milestone_logger.record_click()
+	total_clicks += 1
 	stats_changed.emit()
 	return gain
 
@@ -673,10 +710,13 @@ func _tick_auto_click(delta: float) -> void:
 func deploy() -> float:
 	if loc <= 0.0:
 		return 0.0
+	if productivity_factor() < 0.3:
+		deployed_low_prod = true
 	var earned := loc * deploy_rate * prestige_mult * sqrt(productivity_factor())
 	money += earned
 	loc = 0.0
 	_clamp_stats()
+	total_deploys += 1
 	stats_changed.emit()
 	if _milestone_logger != null:
 		_milestone_logger.on_deploy(self)
