@@ -1,22 +1,23 @@
 extends CanvasLayer
 
-const C_CYAN := Color("#00e5ff")
-const C_MAGENTA := Color("#ff00aa")
-const C_PRESTIGE := Color("#b44cff")
-const C_RED := Color("#ff4466")
-const C_PANEL := Color(0.08, 0.06, 0.14, 0.88)
-const C_MUTED := Color("#666688")
-const C_TEXT := Color("#e8e0ff")
+const C_CYAN := UITheme.C_CYAN
+const C_MAGENTA := UITheme.C_MAGENTA
+const C_PRESTIGE := UITheme.C_PRESTIGE
+const C_RED := UITheme.C_RED
+const C_PANEL := UITheme.C_PANEL
+const C_MUTED := UITheme.C_MUTED
+const C_TEXT := UITheme.C_TEXT
+
+const FONT_STAT := UITheme.FONT_STAT
+const FONT_UPGRADE_NAME := UITheme.FONT_UPGRADE_NAME
+const FONT_UPGRADE_PRICE := UITheme.FONT_UPGRADE_PRICE
+const FONT_MEME := UITheme.FONT_MEME
+const FONT_CATEGORY := UITheme.FONT_CATEGORY
+const FONT_BONUS := UITheme.FONT_BONUS
+const FONT_BONUS_SMALL := UITheme.FONT_BONUS_SMALL
 
 const UPGRADE_PANEL_WIDTH := 340.0
 const UPGRADE_PANEL_MARGIN := 16.0
-const FONT_STAT := 20
-const FONT_UPGRADE_NAME := 18
-const FONT_UPGRADE_PRICE := 16
-const FONT_MEME := 13
-const FONT_CATEGORY := 16
-const FONT_BONUS := 14
-const FONT_BONUS_SMALL := 13
 
 const BULK_MODES := [1, 5, 10, 0]  # 0 = Макс
 const BULK_TAB_LABELS := ["×1", "×5", "×10", "Макс"]
@@ -180,18 +181,18 @@ func _build_top_bar(root: Control) -> void:
 	top.position = Vector2(16, 16)
 	top.custom_minimum_size = Vector2(400, 0)
 	top.mouse_filter = Control.MOUSE_FILTER_STOP
-	_apply_panel_style(top)
+	UITheme.apply_panel_style(top)
 	root.add_child(top)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	top.add_child(column)
 
-	_loc_label = _make_stat_label("💾 Код: 0")
-	_money_label = _make_stat_label("💰 Гроші: $0")
-	_bugs_label = _make_stat_label("🐛 Баги: 0")
-	_prod_label = _make_stat_label("⚡ Продуктивність: 100%")
-	_rate_label = _make_stat_label("📈 +0 код/с")
+	_loc_label = UITheme.make_stat_label("💾 Код: 0")
+	_money_label = UITheme.make_stat_label("💰 Гроші: $0")
+	_bugs_label = UITheme.make_stat_label("🐛 Баги: 0")
+	_prod_label = UITheme.make_stat_label("⚡ Продуктивність: 100%")
+	_rate_label = UITheme.make_stat_label("📈 +0 код/с")
 	for label: Label in [_loc_label, _money_label, _bugs_label, _prod_label, _rate_label]:
 		column.add_child(label)
 
@@ -199,7 +200,7 @@ func _build_top_bar(root: Control) -> void:
 	_prestige_button.text = "PRESTIGE — Refactor"
 	_prestige_button.custom_minimum_size = Vector2(0, 40)
 	_prestige_button.visible = false
-	_style_button(_prestige_button, C_PRESTIGE)
+	UITheme.style_button(_prestige_button, C_PRESTIGE)
 	_prestige_button.pressed.connect(_on_prestige_pressed)
 	column.add_child(_prestige_button)
 
@@ -207,7 +208,7 @@ func _build_top_bar(root: Control) -> void:
 	_prestige_tree_button.text = "🌳 Refactor tree"
 	_prestige_tree_button.custom_minimum_size = Vector2(0, 40)
 	_prestige_tree_button.visible = false
-	_style_button(_prestige_tree_button, C_PRESTIGE)
+	UITheme.style_button(_prestige_tree_button, C_PRESTIGE)
 	_prestige_tree_button.pressed.connect(_open_prestige_tree)
 	column.add_child(_prestige_tree_button)
 
@@ -220,7 +221,7 @@ func _build_onboarding_panel(root: Control) -> void:
 	_onboarding_panel.offset_right = 360.0
 	_onboarding_panel.offset_bottom = -88.0
 	_onboarding_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	_apply_panel_style(_onboarding_panel)
+	UITheme.apply_panel_style(_onboarding_panel)
 	root.add_child(_onboarding_panel)
 
 	var column := VBoxContainer.new()
@@ -249,7 +250,7 @@ func _build_onboarding_panel(root: Control) -> void:
 	var submit := Button.new()
 	submit.text = "Enter"
 	submit.custom_minimum_size = Vector2(72, 36)
-	_style_button(submit, C_CYAN)
+	UITheme.style_button(submit, C_CYAN)
 	submit.pressed.connect(func() -> void: _on_hello_world_submitted(_onboarding_input.text))
 	_onboarding_input_row.add_child(submit)
 
@@ -270,7 +271,7 @@ func _build_upgrade_panel(root: Control) -> void:
 	panel.offset_right = -UPGRADE_PANEL_MARGIN
 	panel.offset_bottom = -76.0
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	_apply_panel_style(panel)
+	UITheme.apply_panel_style(panel)
 	root.add_child(panel)
 
 	var outer := VBoxContainer.new()
@@ -334,20 +335,7 @@ func _refresh_bulk_tabs() -> void:
 	for i: int in _bulk_tab_buttons.size():
 		var tab := _bulk_tab_buttons[i]
 		var active := i == _bulk_mode_index
-		_style_tab_button(tab, active)
-
-
-func _style_tab_button(button: Button, active: bool) -> void:
-	var accent := C_CYAN if active else C_MUTED
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(accent, 0.28 if active else 0.08)
-	normal.set_corner_radius_all(6)
-	normal.set_border_width_all(1)
-	normal.border_color = Color(accent, 0.9 if active else 0.35)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", normal)
-	button.add_theme_stylebox_override("pressed", normal)
-	button.add_theme_color_override("font_color", accent if active else C_TEXT)
+		UITheme.style_tab_button(tab, active)
 
 
 func _build_bonuses_panel(root: Control) -> void:
@@ -359,7 +347,7 @@ func _build_bonuses_panel(root: Control) -> void:
 	panel.offset_right = 336.0
 	panel.offset_bottom = -80.0
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	_apply_panel_style(panel)
+	UITheme.apply_panel_style(panel)
 	root.add_child(panel)
 
 	var outer := VBoxContainer.new()
@@ -489,7 +477,7 @@ func _create_upgrade_row(def: Dictionary) -> PanelContainer:
 	buy.name = "BuyButton"
 	buy.custom_minimum_size = Vector2(0, 38)
 	buy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_style_button(buy, C_MAGENTA)
+	UITheme.style_button(buy, C_MAGENTA)
 	buy.add_theme_font_size_override("font_size", FONT_UPGRADE_PRICE)
 	buy.pressed.connect(_on_upgrade_buy_pressed.bind(def["id"]))
 	box.add_child(buy)
@@ -523,7 +511,7 @@ func _build_bottom_bar(root: Control) -> void:
 	_deploy_button.text = "git push — DEPLOY"
 	_deploy_button.custom_minimum_size = Vector2(260, 48)
 	_deploy_button.add_theme_font_size_override("font_size", 18)
-	_style_button(_deploy_button, C_MAGENTA)
+	UITheme.style_button(_deploy_button, C_MAGENTA)
 	_deploy_button.pressed.connect(_on_deploy_pressed)
 	bottom.add_child(_deploy_button)
 
@@ -538,7 +526,7 @@ func _build_reset_button(root: Control) -> void:
 	btn.text = "Скинути прогрес"
 	btn.add_theme_font_size_override("font_size", 13)
 	btn.mouse_filter = Control.MOUSE_FILTER_STOP
-	_style_button(btn, C_RED)
+	UITheme.style_button(btn, C_RED)
 	btn.pressed.connect(_on_reset_pressed)
 	root.add_child(btn)
 
@@ -566,7 +554,7 @@ func _build_prestige_tree_menu(root: Control) -> void:
 	panel.offset_right = 460.0
 	panel.offset_bottom = 310.0
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	_apply_panel_style(panel)
+	UITheme.apply_panel_style(panel)
 	var panel_style := panel.get_theme_stylebox("panel") as StyleBoxFlat
 	if panel_style != null:
 		panel_style.border_color = Color(C_PRESTIGE, 0.55)
@@ -595,7 +583,7 @@ func _build_prestige_tree_menu(root: Control) -> void:
 	var close_btn := Button.new()
 	close_btn.text = "✕"
 	close_btn.custom_minimum_size = Vector2(40, 36)
-	_style_button(close_btn, C_MUTED)
+	UITheme.style_button(close_btn, C_MUTED)
 	close_btn.pressed.connect(_close_prestige_tree)
 	header.add_child(close_btn)
 
@@ -645,7 +633,7 @@ func _add_prestige_tree_tester_row(outer: VBoxContainer) -> void:
 	grant_btn.text = "+10 refactor pts"
 	grant_btn.custom_minimum_size = Vector2(160, 36)
 	grant_btn.add_theme_font_size_override("font_size", 14)
-	_style_button(grant_btn, C_PRESTIGE)
+	UITheme.style_button(grant_btn, C_PRESTIGE)
 	grant_btn.pressed.connect(func() -> void:
 		GameState.grant_prestige_points(10)
 	)
@@ -732,7 +720,7 @@ func _create_skill_row(def: Dictionary) -> PanelContainer:
 	buy.name = "BuyButton"
 	buy.custom_minimum_size = Vector2(0, 36)
 	buy.add_theme_font_size_override("font_size", FONT_UPGRADE_PRICE)
-	_style_button(buy, C_PRESTIGE)
+	UITheme.style_button(buy, C_PRESTIGE)
 	buy.pressed.connect(_on_skill_buy_pressed.bind(def["id"]))
 	box.add_child(buy)
 
@@ -860,7 +848,7 @@ func _build_debug_skill_panel(root: Control) -> void:
 		btn.text = entry["label"]
 		btn.custom_minimum_size = Vector2(128, 32)
 		btn.add_theme_font_size_override("font_size", 12)
-		_style_button(btn, Color("#ffaa44"))
+		UITheme.style_button(btn, Color("#ffaa44"))
 		btn.pressed.connect(_on_debug_skill_pressed.bind(entry))
 		grid.add_child(btn)
 
@@ -893,44 +881,6 @@ func _refresh_debug_skill_panel() -> void:
 			", ".join(owned) if not owned.is_empty() else "(none)",
 		]
 	)
-
-
-func _apply_panel_style(panel: PanelContainer) -> void:
-	var style := StyleBoxFlat.new()
-	style.bg_color = C_PANEL
-	style.set_corner_radius_all(8)
-	style.set_border_width_all(1)
-	style.border_color = Color(C_CYAN, 0.35)
-	style.content_margin_left = 14
-	style.content_margin_right = 14
-	style.content_margin_top = 12
-	style.content_margin_bottom = 12
-	panel.add_theme_stylebox_override("panel", style)
-
-
-func _make_stat_label(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_color_override("font_color", C_TEXT)
-	label.add_theme_font_size_override("font_size", FONT_STAT)
-	return label
-
-
-func _style_button(button: Button, accent: Color) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(accent, 0.18)
-	normal.set_corner_radius_all(6)
-	normal.set_border_width_all(1)
-	normal.border_color = Color(accent, 0.65)
-	button.add_theme_stylebox_override("normal", normal)
-	var disabled := normal.duplicate()
-	disabled.bg_color = Color(0.15, 0.13, 0.2, 0.6)
-	disabled.border_color = Color(C_MUTED, 0.4)
-	button.add_theme_stylebox_override("disabled", disabled)
-	button.add_theme_stylebox_override("hover", normal)
-	button.add_theme_stylebox_override("pressed", normal)
-	button.add_theme_color_override("font_color", accent)
-	button.add_theme_color_override("font_disabled_color", C_MUTED)
 
 
 func _refresh_all() -> void:
