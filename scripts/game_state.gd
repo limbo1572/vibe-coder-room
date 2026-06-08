@@ -9,7 +9,8 @@ signal stats_changed
 signal passive_gain(loc_gain: float)
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SAVE_VERSION := 5
+const CURRENT_SAVE_VERSION := 6
+const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
 const AUTOSAVE_SEC := 10.0
 const OFFLINE_CAP_SEC := 28800.0  # 8 hours
 
@@ -59,6 +60,7 @@ var hello_world_with_bug: bool = false
 var hello_world_hint_seen: bool = false
 
 var last_tick_time: float = 0.0
+var total_play_time: float = 0.0  # сумарний активний ігровий час, сек
 
 var _autosave_timer: Timer
 var _offline_summary: Dictionary = {}
@@ -385,6 +387,7 @@ func save_game() -> void:
 		"upgrade_owned": upgrade_owned.duplicate(),
 		"skill_owned": skill_owned.duplicate(),
 		"last_tick_time": last_tick_time,
+		"total_play_time": total_play_time,
 		"click_unlocked": click_unlocked,
 		"hello_world_done": hello_world_done,
 		"hello_world_with_bug": hello_world_with_bug,
@@ -432,6 +435,7 @@ func load_game() -> bool:
 	bugs = float(data.get("bugs", 0.0))
 	prestige_points = int(data.get("prestige_points", 0))
 	prestige_mult = float(data.get("prestige_mult", 1.0))
+	total_play_time = float(data.get("total_play_time", 0.0))
 
 	var save_version := int(data.get("save_version", 0))
 	if save_version < 3:
@@ -493,6 +497,7 @@ func _apply_default_state() -> void:
 	_offline_summary = {}
 	_auto_click_timer = 0.0
 	last_tick_time = _now()
+	total_play_time = 0.0
 	recalculate_stats()
 	if _milestone_logger != null and TESTER_MODE:
 		_milestone_logger.reset_session()
@@ -577,6 +582,8 @@ func tick_passive_realtime() -> void:
 	var elapsed := minf(now - last_tick_time, OFFLINE_CAP_SEC)
 	if elapsed <= 0.0:
 		return
+	if elapsed <= ACTIVE_TICK_MAX:
+		total_play_time += elapsed
 	last_tick_time = now
 	var gains := _apply_passive_for_elapsed(elapsed)
 	if gains.loc > 0.0:
