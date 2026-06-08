@@ -24,6 +24,7 @@ const BASE_QA_POWER := 0.0
 
 const PRESTIGE_MONEY_THRESHOLD := 1_000_000.0
 const STAT_SOFT_CAP := 1e100
+const TESTER_MODE := true  # true для тестерів на itch, false для публічного релізу
 
 var loc: float = 0.0
 var money: float = 0.0
@@ -68,7 +69,7 @@ var _milestone_logger: ProgressMilestoneLogger
 func _ready() -> void:
 	_init_milestone_logger()
 	load_game()
-	if OS.is_debug_build() and _milestone_logger != null:
+	if TESTER_MODE and _milestone_logger != null:
 		_milestone_logger.sync_from_save(self)
 	_autosave_timer = Timer.new()
 	_autosave_timer.wait_time = AUTOSAVE_SEC
@@ -79,7 +80,7 @@ func _ready() -> void:
 
 func _init_milestone_logger() -> void:
 	_milestone_logger = ProgressMilestoneLogger.new()
-	if OS.is_debug_build():
+	if TESTER_MODE:
 		_milestone_logger.begin()
 
 
@@ -234,6 +235,8 @@ func buy_skill(skill_id: String) -> bool:
 
 
 func grant_prestige_points(amount: int) -> void:
+	if not TESTER_MODE:
+		return
 	if amount <= 0:
 		return
 	prestige_points += amount
@@ -491,7 +494,7 @@ func _apply_default_state() -> void:
 	_auto_click_timer = 0.0
 	last_tick_time = _now()
 	recalculate_stats()
-	if _milestone_logger != null and OS.is_debug_build():
+	if _milestone_logger != null and TESTER_MODE:
 		_milestone_logger.reset_session()
 
 

@@ -166,7 +166,7 @@ func _build_ui() -> void:
 	_build_bottom_bar(root)
 	_build_reset_button(root)
 	_build_prestige_tree_menu(root)
-	if OS.is_debug_build():
+	if GameState.TESTER_MODE:
 		_build_debug_skill_panel(root)
 
 	_popup_layer = Control.new()
@@ -626,7 +626,8 @@ func _build_prestige_tree_menu(root: Control) -> void:
 			_prestige_tree_rows[def["id"]] = row
 			list.add_child(row)
 
-	_add_prestige_tree_tester_row(outer)
+	if GameState.TESTER_MODE:
+		_add_prestige_tree_tester_row(outer)
 
 
 func _add_prestige_tree_tester_row(outer: VBoxContainer) -> void:
