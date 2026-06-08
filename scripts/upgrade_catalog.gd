@@ -31,7 +31,7 @@ static func all() -> Array[Dictionary]:
 		{
 			"id": "stackoverflow",
 			"name": "Stack Overflow Premium",
-			"base_cost": 15.0,
+			"base_cost": 5.0,
 			"effect_type": EffectType.LOC_PER_SEC,
 			"effect_value": 0.2,
 			"effect_label": "+0.2 LoC/s",
