@@ -723,18 +723,35 @@ func _add_prestige_tree_tester_row(outer: VBoxContainer) -> void:
 	row.add_child(grant_btn)
 
 
-func _copy_text_to_clipboard(text: String) -> void:
+func _export_milestone_log(text: String) -> void:
 	if OS.has_feature("web"):
 		var js_safe := JSON.stringify(text)
-		var js := "navigator.clipboard.writeText(%s);" % js_safe
+		var js := """
+		(function(){
+			var blob = new Blob([%s], {type: 'text/plain'});
+			var url = URL.createObjectURL(blob);
+			var a = document.createElement('a');
+			a.href = url;
+			a.download = 'vibe_coder_milestones.txt';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		})();
+		""" % js_safe
 		JavaScriptBridge.eval(js, true)
 	else:
 		DisplayServer.clipboard_set(text)
+		var path := "user://vibe_coder_milestones.txt"
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		if f != null:
+			f.store_string(text)
+			f.close()
 
 
 func _add_milestone_log_row(outer: VBoxContainer) -> void:
 	var copy_hint := Label.new()
-	copy_hint.text = "Тисни «Копіювати дані» нижче, потім встав (Ctrl+V) і скинь розробнику:"
+	copy_hint.text = "Тисни «Завантажити дані» — браузер збереже файл. Скинь його розробнику:"
 	copy_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	copy_hint.add_theme_color_override("font_color", C_MUTED)
 	copy_hint.add_theme_font_size_override("font_size", 12)
@@ -749,17 +766,17 @@ func _add_milestone_log_row(outer: VBoxContainer) -> void:
 	outer.add_child(_milestone_log_label)
 
 	var copy_btn := Button.new()
-	copy_btn.text = "Копіювати дані"
+	copy_btn.text = "Завантажити дані"
 	copy_btn.custom_minimum_size = Vector2(160, 36)
 	copy_btn.add_theme_font_size_override("font_size", 14)
 	UITheme.style_button(copy_btn, C_PRESTIGE)
 	copy_btn.pressed.connect(func() -> void:
-		_copy_text_to_clipboard(GameState.get_milestone_log())
-		copy_btn.text = "Скопійовано ✓"
+		_export_milestone_log(GameState.get_milestone_log())
+		copy_btn.text = "Завантажено ✓"
 		var t := get_tree().create_timer(1.5)
 		t.timeout.connect(func() -> void:
 			if is_instance_valid(copy_btn):
-				copy_btn.text = "Копіювати дані"
+				copy_btn.text = "Завантажити дані"
 		)
 	)
 	outer.add_child(copy_btn)
