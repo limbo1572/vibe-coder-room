@@ -9,7 +9,7 @@ signal stats_changed
 signal passive_gain(loc_gain: float)
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SAVE_VERSION := 4
+const CURRENT_SAVE_VERSION := 5
 const AUTOSAVE_SEC := 10.0
 const OFFLINE_CAP_SEC := 28800.0  # 8 hours
 
@@ -438,7 +438,10 @@ func load_game() -> bool:
 	var skills_raw: Variant = data.get("skill_owned", {})
 	if typeof(skills_raw) == TYPE_DICTIONARY:
 		for key: Variant in skills_raw:
-			skill_owned[str(key)] = bool(skills_raw[key])
+			var skill_id := str(key)
+			if not skill_id.begins_with("sk_"):
+				skill_id = "sk_" + skill_id
+			skill_owned[skill_id] = bool(skills_raw[key])
 
 	recalculate_stats()
 	_clamp_stats()

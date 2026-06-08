@@ -6,6 +6,7 @@
 !/build/web/serve.py
 /build/*.zip
 /export/
+*.rar
 
 # OS / editor
 .DS_Store

@@ -41,11 +41,11 @@ const PRESTIGE_BRANCH_ORDER := ["core", "senior", "vibe", "qa"]
 
 const DEBUG_SKILL_BUTTONS := [
 	{"id": "", "label": "+10 refactor pts", "action": "grant_10"},
-	{"id": "caffeine", "label": "caffeine", "action": "buy"},
-	{"id": "fast_fingers", "label": "fast_fingers", "action": "buy"},
-	{"id": "autocomplete", "label": "autocomplete", "action": "buy"},
-	{"id": "bg_agent", "label": "bg_agent", "action": "buy"},
-	{"id": "cicd", "label": "cicd", "action": "buy"},
+	{"id": "sk_caffeine", "label": "caffeine", "action": "buy"},
+	{"id": "sk_fast_fingers", "label": "fast_fingers", "action": "buy"},
+	{"id": "sk_autocomplete", "label": "autocomplete", "action": "buy"},
+	{"id": "sk_bg_agent", "label": "bg_agent", "action": "buy"},
+	{"id": "sk_cicd", "label": "cicd", "action": "buy"},
 ]
 
 var _loc_label: Label
