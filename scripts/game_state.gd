@@ -85,6 +85,12 @@ func _init_milestone_logger() -> void:
 		_milestone_logger.begin()
 
 
+func get_milestone_log() -> String:
+	if _milestone_logger == null:
+		return ""
+	return _milestone_logger.get_log_text()
+
+
 func _process(delta: float) -> void:
 	tick_passive_realtime()
 	_tick_auto_click(delta)

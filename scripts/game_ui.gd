@@ -83,6 +83,7 @@ var _passive_pending_gain: float = 0.0
 var _passive_popup_timer: float = 0.0
 var _debug_skill_panel: PanelContainer
 var _debug_skill_status: Label
+var _milestone_log_label: Label
 
 
 func _ready() -> void:
@@ -639,6 +640,29 @@ func _add_prestige_tree_tester_row(outer: VBoxContainer) -> void:
 	)
 	row.add_child(grant_btn)
 
+	var data_title := Label.new()
+	data_title.text = "Дані тесту (скинь розробнику):"
+	data_title.add_theme_color_override("font_color", C_MUTED)
+	data_title.add_theme_font_size_override("font_size", 12)
+	outer.add_child(data_title)
+
+	_milestone_log_label = Label.new()
+	_milestone_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_milestone_log_label.add_theme_color_override("font_color", C_TEXT)
+	_milestone_log_label.add_theme_font_size_override("font_size", 12)
+	_milestone_log_label.text = GameState.get_milestone_log()
+	outer.add_child(_milestone_log_label)
+
+	var copy_btn := Button.new()
+	copy_btn.text = "Копіювати дані"
+	copy_btn.custom_minimum_size = Vector2(160, 36)
+	copy_btn.add_theme_font_size_override("font_size", 14)
+	UITheme.style_button(copy_btn, C_PRESTIGE)
+	copy_btn.pressed.connect(func() -> void:
+		DisplayServer.clipboard_set(GameState.get_milestone_log())
+	)
+	outer.add_child(copy_btn)
+
 
 func _prestige_branch_title(branch: String) -> String:
 	match branch:
@@ -766,6 +790,9 @@ func _on_skill_buy_pressed(skill_id: String) -> void:
 func _refresh_prestige_tree() -> void:
 	if _prestige_tree_points_label != null:
 		_prestige_tree_points_label.text = "%d refactor pts" % GameState.prestige_points
+
+	if _milestone_log_label != null:
+		_milestone_log_label.text = GameState.get_milestone_log()
 
 	for skill_id: String in _prestige_tree_rows:
 		var row: PanelContainer = _prestige_tree_rows[skill_id]
