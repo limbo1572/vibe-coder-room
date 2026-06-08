@@ -989,6 +989,13 @@ func _create_achievement_row(def: Dictionary) -> PanelContainer:
 		desc.text = def["desc"]
 		name.add_theme_color_override("font_color", C_CYAN)
 		desc.add_theme_color_override("font_color", C_TEXT)
+		var reward := float(def.get("reward_loc_mult", 0.0))
+		if reward > 0.0:
+			var reward_label := Label.new()
+			reward_label.text = "+%.0f%% до LoC" % (reward * 100.0)
+			reward_label.add_theme_color_override("font_color", C_PRESTIGE)
+			reward_label.add_theme_font_size_override("font_size", FONT_MEME)
+			box.add_child(reward_label)
 	elif is_hidden:
 		name.text = "???"
 		desc.text = "Прихована ачівка"
@@ -1009,7 +1016,7 @@ func _on_achievement_unlocked(_id: String, def: Dictionary) -> void:
 	_refresh_achievements_button()
 	if _achievements_overlay != null and _achievements_overlay.visible:
 		_refresh_achievements_panel()
-	_show_achievement_toast(str(def.get("name", "")))
+	_show_achievement_toast(def)
 
 
 func _on_flavor_triggered(line: Dictionary) -> void:
@@ -1169,7 +1176,8 @@ func _show_flavor_banner(line: Dictionary) -> void:
 	tween.tween_callback(banner.queue_free)
 
 
-func _show_achievement_toast(achievement_name: String) -> void:
+func _show_achievement_toast(def: Dictionary) -> void:
+	var achievement_name := str(def.get("name", ""))
 	if _popup_layer == null or achievement_name.is_empty():
 		return
 
@@ -1186,11 +1194,23 @@ func _show_achievement_toast(achievement_name: String) -> void:
 	banner.add_theme_stylebox_override("panel", style)
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	banner.add_child(column)
+
 	var label := Label.new()
 	label.text = "🏆 Досягнення: %s" % achievement_name
 	label.add_theme_color_override("font_color", C_CYAN)
 	label.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
-	banner.add_child(label)
+	column.add_child(label)
+
+	var reward := float(def.get("reward_loc_mult", 0.0))
+	if reward > 0.0:
+		var reward_label := Label.new()
+		reward_label.text = "+%.0f%% до LoC" % (reward * 100.0)
+		reward_label.add_theme_color_override("font_color", C_PRESTIGE)
+		reward_label.add_theme_font_size_override("font_size", FONT_MEME)
+		column.add_child(reward_label)
 
 	banner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	banner.offset_left = -360.0

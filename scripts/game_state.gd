@@ -272,6 +272,9 @@ func recalculate_stats() -> void:
 			loc_per_click *= pow(def["effect_value"], owned)
 
 	_apply_skill_stat_modifiers()
+	if Engine.has_singleton("Achievements") or typeof(Achievements) != TYPE_NIL:
+		if Achievements != null and Achievements.has_method("total_loc_mult_bonus"):
+			global_loc_mult *= (1.0 + Achievements.total_loc_mult_bonus())
 
 	loc_per_click *= (1.0 + click_mult_add)
 	loc_per_sec *= (1.0 + sec_mult_add)

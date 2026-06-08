@@ -46,24 +46,28 @@ const DEFS: Array[Dictionary] = [
 		"name": "Воно само",
 		"desc": "Ти просто дивився. Як справжній сіньйор.",
 		"hidden": false,
+		"reward_loc_mult": 0.03,
 	},
 	{
 		"id": "so_driven",
 		"name": "Stack Overflow Driven Development",
 		"desc": "Ctrl+C, Ctrl+V, Ctrl+гонорар.",
 		"hidden": false,
+		"reward_loc_mult": 0.03,
 	},
 	{
 		"id": "cloud_guy",
 		"name": "Лідер по даунлоадах",
 		"desc": "Чужий компʼютер. Твоя совість.",
 		"hidden": false,
+		"reward_loc_mult": 0.03,
 	},
 	{
 		"id": "manager",
 		"name": "Менеджер",
 		"desc": "Ти більше не кодиш. Ти проводиш стендапи.",
 		"hidden": false,
+		"reward_loc_mult": 0.03,
 	},
 	{
 		"id": "speed_of_light",
@@ -82,12 +86,14 @@ const DEFS: Array[Dictionary] = [
 		"name": "Деплой-машина",
 		"desc": "git push став рефлексом.",
 		"hidden": false,
+		"reward_loc_mult": 0.03,
 	},
 	{
 		"id": "refactor_holic",
 		"name": "Рефакторинг-голік",
 		"desc": "Цього разу точно буде чисто.",
 		"hidden": false,
+		"reward_loc_mult": 0.03,
 	},
 	{
 		"id": "honest_dev",
@@ -148,6 +154,9 @@ func _ready() -> void:
 	GameState.stats_changed.connect(_check_all)
 	_check_all()
 	_initial_scan_done = true
+	if GameState.has_method("recalculate_stats"):
+		GameState.recalculate_stats()
+		GameState.stats_changed.emit()
 
 
 func _check_all() -> void:
@@ -175,6 +184,10 @@ func _unlock(id: String, def: Dictionary) -> void:
 	print("[ACHIEVEMENT] %s" % id)
 	if _initial_scan_done:
 		achievement_unlocked.emit(id, def)
+	if float(def.get("reward_loc_mult", 0.0)) > 0.0:
+		if GameState.has_method("recalculate_stats"):
+			GameState.recalculate_stats()
+			GameState.stats_changed.emit()
 
 
 func find_def(id: String) -> Dictionary:
@@ -198,6 +211,14 @@ func get_total_count() -> int:
 
 func is_unlocked(id: String) -> bool:
 	return bool(unlocked.get(id, false))
+
+
+func total_loc_mult_bonus() -> float:
+	var bonus := 0.0
+	for def: Dictionary in DEFS:
+		if unlocked.get(def["id"], false):
+			bonus += float(def.get("reward_loc_mult", 0.0))
+	return bonus
 
 
 func _is_unlocked(id: String) -> bool:
