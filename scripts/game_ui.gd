@@ -94,6 +94,7 @@ var _achievements_list: VBoxContainer
 var _prestige_tree_open_points: int = -1
 var _prestige_tree_open_skills: int = -1
 var _captcha_overlay: Control
+var _captcha_panel: Control
 var _flavor_queue: Array[Dictionary] = []
 var _flavor_showing: bool = false
 
@@ -1049,6 +1050,8 @@ func _on_captcha_triggered() -> void:
 func _show_captcha_modal() -> void:
 	if _captcha_overlay != null:
 		_captcha_overlay.visible = true
+		if _captcha_panel != null:
+			_randomize_captcha_pos(_captcha_panel, 480.0, 240.0)
 		return
 
 	var root := get_child(0) as Control
@@ -1067,13 +1070,13 @@ func _show_captcha_modal() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	overlay.add_child(dim)
 
+	var box_w := 480.0
+	var box_h := 240.0
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(480, 240)
-	panel.offset_left = -240.0
-	panel.offset_top = -120.0
-	panel.offset_right = 240.0
-	panel.offset_bottom = 120.0
+	_captcha_panel = panel
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	panel.custom_minimum_size = Vector2(box_w, box_h)
+	_randomize_captcha_pos(panel, box_w, box_h)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.08, 0.06, 0.06, 0.96)
@@ -1131,6 +1134,19 @@ func _show_captcha_modal() -> void:
 	column.add_child(hint)
 
 
+func _randomize_captcha_pos(panel: Control, box_w: float, box_h: float) -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var margin := 24.0
+	var max_x := maxf(margin, vp.x - box_w - margin)
+	var max_y := maxf(margin, vp.y - box_h - margin)
+	var px := randf_range(margin, max_x)
+	var py := randf_range(margin, max_y)
+	panel.offset_left = px
+	panel.offset_top = py
+	panel.offset_right = px + box_w
+	panel.offset_bottom = py + box_h
+
+
 func _on_captcha_y_pressed() -> void:
 	GameState.resolve_captcha()
 	if _captcha_overlay != null:
@@ -1147,11 +1163,11 @@ func _show_flavor_banner(line: Dictionary) -> void:
 
 	var slot := 0
 	for child in _popup_layer.get_children():
-		if child.has_meta("flavor_banner"):
+		if child.has_meta("popup_banner"):
 			slot += 1
 
 	var banner := PanelContainer.new()
-	banner.set_meta("flavor_banner", true)
+	banner.set_meta("popup_banner", true)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(C_PANEL, 0.95)
 	style.set_corner_radius_all(8)
@@ -1183,16 +1199,16 @@ func _show_flavor_banner(line: Dictionary) -> void:
 		label.add_theme_color_override("font_color", C_CYAN)
 
 	banner.add_child(label)
-	banner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	var y_off := 16.0 + float(slot) * 52.0
-	banner.offset_left = -360.0
+	banner.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	var y_off := -56.0 - float(slot) * 52.0
+	banner.offset_left = 16.0
 	banner.offset_top = y_off
-	banner.offset_right = -16.0
+	banner.offset_right = 376.0
 	banner.offset_bottom = y_off + 40.0
 	_popup_layer.add_child(banner)
 
 	var tween := create_tween()
-	tween.tween_interval(2.5)
+	tween.tween_interval(5.0)
 	tween.tween_property(banner, "modulate:a", 0.0, 0.5)
 	tween.tween_callback(banner.queue_free)
 
@@ -1202,7 +1218,13 @@ func _show_achievement_toast(def: Dictionary) -> void:
 	if _popup_layer == null or achievement_name.is_empty():
 		return
 
+	var slot := 0
+	for child in _popup_layer.get_children():
+		if child.has_meta("popup_banner"):
+			slot += 1
+
 	var banner := PanelContainer.new()
+	banner.set_meta("popup_banner", true)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(C_PANEL, 0.95)
 	style.set_corner_radius_all(8)
@@ -1233,15 +1255,16 @@ func _show_achievement_toast(def: Dictionary) -> void:
 		reward_label.add_theme_font_size_override("font_size", FONT_MEME)
 		column.add_child(reward_label)
 
-	banner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	banner.offset_left = -360.0
-	banner.offset_top = 16.0
-	banner.offset_right = -16.0
-	banner.offset_bottom = 56.0
+	banner.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	var y_off := -56.0 - float(slot) * 52.0
+	banner.offset_left = 16.0
+	banner.offset_top = y_off
+	banner.offset_right = 376.0
+	banner.offset_bottom = y_off + 40.0
 	_popup_layer.add_child(banner)
 
 	var tween := create_tween()
-	tween.tween_interval(2.5)
+	tween.tween_interval(4.0)
 	tween.tween_property(banner, "modulate:a", 0.0, 0.5)
 	tween.tween_callback(banner.queue_free)
 
