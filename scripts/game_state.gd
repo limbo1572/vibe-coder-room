@@ -29,7 +29,8 @@ const BASE_LOC_PER_SEC := 0.0
 const BASE_DEPLOY_RATE := 0.10
 const BASE_QA_POWER := 0.0
 
-const PRESTIGE_MONEY_THRESHOLD := 1_000_000.0
+const PRESTIGE_BASE_THRESHOLD := 10_000.0
+const PRESTIGE_THRESHOLD_STEP := 3.0
 const STAT_SOFT_CAP := 1e100
 const MEASURE_MODE := true   # логер віх для збору кривої балансу (заїзд: true, реліз: false)
 const DEBUG_CHEATS := false  # чити+дебаг-панелі для розробки (заїзд: false, реліз: false)
@@ -43,7 +44,7 @@ var deploy_rate: float = BASE_DEPLOY_RATE
 var qa_power: float = BASE_QA_POWER
 var prestige_mult: float = 1.0
 var prestige_points: int = 0
-var lifetime_prestige_points: int = 0   # сумарно зароблених очок престижу (база множника, лише росте)
+var lifetime_prestige_points: int = 0   # сумарно зароблених очок престижу (ачівки, статистика)
 var prestige_count: int = 0
 
 var upgrade_owned: Dictionary = {}
@@ -392,7 +393,6 @@ func grant_prestige_points(amount: int) -> void:
 	used_cheats = true
 	prestige_points += amount
 	lifetime_prestige_points += amount
-	prestige_mult = 1.0 + lifetime_prestige_points * 0.1
 	save_game()
 	stats_changed.emit()
 	print("Granted %d prestige points (total: %d)" % [amount, prestige_points])
@@ -619,8 +619,6 @@ func load_game() -> bool:
 		lifetime_prestige_points = maxi(from_mult, prestige_points)
 	else:
 		lifetime_prestige_points = saved_lifetime
-	# перерахувати множник від lifetime для консистентності
-	prestige_mult = 1.0 + lifetime_prestige_points * 0.1
 	total_play_time = float(data.get("total_play_time", 0.0))
 
 	var save_version := int(data.get("save_version", 0))
@@ -925,22 +923,26 @@ func deploy() -> float:
 
 
 func can_prestige() -> bool:
-	return money >= PRESTIGE_MONEY_THRESHOLD
+	return money >= prestige_threshold()
+
+
+func prestige_threshold() -> float:
+	return PRESTIGE_BASE_THRESHOLD * pow(PRESTIGE_THRESHOLD_STEP, prestige_count)
 
 
 func preview_prestige_points() -> int:
 	if not can_prestige():
 		return 0
-	return int(floor(sqrt(money / PRESTIGE_MONEY_THRESHOLD)))
+	return 1
 
 
 func prestige() -> int:
 	if not can_prestige():
 		return 0
+	var spent := prestige_threshold()
 	var new_points := preview_prestige_points()
 	prestige_points += new_points
 	lifetime_prestige_points += new_points
-	prestige_mult = 1.0 + lifetime_prestige_points * 0.1
 
 	loc = 0.0
 	bugs = 0.0
@@ -951,7 +953,7 @@ func prestige() -> int:
 	_flavor_bug_level_4 = false
 	_flavor_bug_level_5 = false
 	recalculate_stats()
-	money = prestige_start_money
+	money = maxf(0.0, money - spent) + prestige_start_money
 	prestige_count += 1
 
 	stats_changed.emit()

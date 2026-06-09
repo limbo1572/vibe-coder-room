@@ -1557,10 +1557,8 @@ func _refresh_stats() -> void:
 		var can := GameState.can_prestige()
 		_prestige_button.visible = can
 		if can:
-			var pts := GameState.preview_prestige_points()
-			_prestige_button.text = "PRESTIGE — +%d refactor pts ($%s+)" % [
-				pts,
-				GameState.format_num(GameState.PRESTIGE_MONEY_THRESHOLD),
+			_prestige_button.text = "PRESTIGE — +1 refactor pt ($%s+)" % [
+				GameState.format_num(GameState.prestige_threshold()),
 			]
 
 	if _prestige_tree_button != null:
@@ -1706,11 +1704,9 @@ func _on_deploy_pressed() -> void:
 
 func _on_prestige_pressed() -> void:
 	var flavor := FlavorLines.prestige_text(GameState.prestige_count)
-	var gained := GameState.preview_prestige_points()
-	var cur_mult := GameState.prestige_mult
-	var new_mult := 1.0 + (GameState.lifetime_prestige_points + gained) * 0.1
-	_prestige_dialog.dialog_text = "%s\n\n+%d refactor pts · множник ×%.1f → ×%.1f (+10%% до всього за очко, назавжди)" % [
-		flavor, gained, cur_mult, new_mult,
+	var cost := GameState.prestige_threshold()
+	_prestige_dialog.dialog_text = "%s\n\nРефактор коштує $%s. Отримаєш +1 очко престижу." % [
+		flavor, GameState.format_num(cost),
 	]
 	_prestige_dialog.popup_centered()
 
