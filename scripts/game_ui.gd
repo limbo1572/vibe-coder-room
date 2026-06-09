@@ -1517,9 +1517,28 @@ func _shake_onboarding_input() -> void:
 func _refresh_stats() -> void:
 	_loc_label.text = "◆ Код: %s" % GameState.format_num(GameState.loc)
 	_money_label.text = "¤ Гроші: $%s" % GameState.format_num(GameState.money)
-	_bugs_label.text = "● Баги: %s" % GameState.format_num(GameState.bugs)
 
 	var prod := GameState.productivity_factor()
+	var bug_inflow := (
+		GameState.loc_per_sec * GameState.prestige_mult * prod
+		* GameState.BUG_RATE_PASSIVE * GameState.bug_mult
+	)
+	var bug_outflow := GameState.qa_power + GameState.auto_qa_per_sec
+	var bug_net := bug_inflow - bug_outflow
+
+	var bugs_text := "● Баги: %s" % GameState.format_num(GameState.bugs)
+	if absf(bug_net) > 0.01:
+		var sign_str := "+" if bug_net > 0.0 else "−"
+		bugs_text += " (%s%s/с)" % [sign_str, GameState.format_num(absf(bug_net))]
+	_bugs_label.text = bugs_text
+
+	if bug_net > 0.01:
+		_bugs_label.add_theme_color_override("font_color", C_RED)
+	elif bug_net < -0.01:
+		_bugs_label.add_theme_color_override("font_color", Color("#6a9955"))
+	else:
+		_bugs_label.add_theme_color_override("font_color", C_TEXT)
+
 	_prod_label.text = "⚡ Продуктивність: %.0f%%" % (prod * 100.0)
 
 	var raw_rate := GameState.loc_per_sec * GameState.prestige_mult
@@ -1532,10 +1551,6 @@ func _refresh_stats() -> void:
 		rate_text += "  · ×%.1f prestige" % GameState.prestige_mult
 	_rate_label.text = rate_text
 
-	_bugs_label.add_theme_color_override(
-		"font_color",
-		C_RED if prod < 0.70 else C_TEXT
-	)
 	_deploy_button.disabled = GameState.loc <= 0.0
 
 	if _prestige_button != null:
