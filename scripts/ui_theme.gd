@@ -61,9 +61,11 @@ static func apply_panel_style(panel: PanelContainer) -> void:
 	panel.add_theme_stylebox_override("panel", style)
 
 
-static func make_stat_label(text: String) -> Label:
+static func make_stat_label(text: String, font: Font = null) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_color_override("font_color", C_TEXT)
 	label.add_theme_font_size_override("font_size", FONT_STAT)
+	if font != null:
+		label.add_theme_font_override("font", font)
 	return label

@@ -206,11 +206,11 @@ func _build_top_bar(root: Control) -> void:
 	column.add_theme_constant_override("separation", 8)
 	top.add_child(column)
 
-	_loc_label = UITheme.make_stat_label("💾 Код: 0")
-	_money_label = UITheme.make_stat_label("💰 Гроші: $0")
-	_bugs_label = UITheme.make_stat_label("🐛 Баги: 0")
-	_prod_label = UITheme.make_stat_label("⚡ Продуктивність: 100%")
-	_rate_label = UITheme.make_stat_label("📈 +0 код/с")
+	_loc_label = UITheme.make_stat_label("◆ Код: 0", MONO_FONT)
+	_money_label = UITheme.make_stat_label("¤ Гроші: $0", MONO_FONT)
+	_bugs_label = UITheme.make_stat_label("● Баги: 0", MONO_FONT)
+	_prod_label = UITheme.make_stat_label("⚡ Продуктивність: 100%", MONO_FONT)
+	_rate_label = UITheme.make_stat_label("↗ +0 код/с", MONO_FONT)
 	for label: Label in [_loc_label, _money_label, _bugs_label, _prod_label, _rate_label]:
 		column.add_child(label)
 
@@ -1515,16 +1515,16 @@ func _shake_onboarding_input() -> void:
 
 
 func _refresh_stats() -> void:
-	_loc_label.text = "💾 Код: %s" % GameState.format_num(GameState.loc)
-	_money_label.text = "💰 Гроші: $%s" % GameState.format_num(GameState.money)
-	_bugs_label.text = "🐛 Баги: %s" % GameState.format_num(GameState.bugs)
+	_loc_label.text = "◆ Код: %s" % GameState.format_num(GameState.loc)
+	_money_label.text = "¤ Гроші: $%s" % GameState.format_num(GameState.money)
+	_bugs_label.text = "● Баги: %s" % GameState.format_num(GameState.bugs)
 
 	var prod := GameState.productivity_factor()
 	_prod_label.text = "⚡ Продуктивність: %.0f%%" % (prod * 100.0)
 
 	var raw_rate := GameState.loc_per_sec * GameState.prestige_mult
 	var effective := raw_rate * prod
-	var rate_text := "📈 +%s код/с" % GameState.format_num(effective)
+	var rate_text := "↗ +%s код/с" % GameState.format_num(effective)
 	if raw_rate > 0.0 and prod < 0.999:
 		var penalty := (1.0 - prod) * 100.0
 		rate_text += " (−%.0f%% від багів)" % penalty
