@@ -41,15 +41,14 @@ const ONBOARDING_SUCCESS_BUGGY := (
 const PASSIVE_POPUP_ANCHOR := Vector2(560, 380)
 const PASSIVE_POPUP_BATCH_SEC := 1.0
 
-const PRESTIGE_BRANCH_ORDER := ["core", "senior", "vibe", "qa"]
+const PRESTIGE_BRANCH_ORDER := ["click", "passive", "bugs", "economy"]
 
 const DEBUG_SKILL_BUTTONS := [
 	{"id": "", "label": "+10 refactor pts", "action": "grant_10"},
-	{"id": "sk_caffeine", "label": "caffeine", "action": "buy"},
 	{"id": "sk_fast_fingers", "label": "fast_fingers", "action": "buy"},
 	{"id": "sk_autocomplete", "label": "autocomplete", "action": "buy"},
-	{"id": "sk_bg_agent", "label": "bg_agent", "action": "buy"},
-	{"id": "sk_cicd", "label": "cicd", "action": "buy"},
+	{"id": "sk_linter", "label": "linter", "action": "buy"},
+	{"id": "sk_seed", "label": "seed", "action": "buy"},
 ]
 
 var _loc_label: Label
@@ -62,6 +61,8 @@ var _prestige_button: Button
 var _prestige_tree_button: Button
 var _prestige_tree_overlay: Control
 var _prestige_tree_points_label: Label
+var _prestige_root_level_label: Label
+var _prestige_root_buy_btn: Button
 var _prestige_tree_rows: Dictionary = {}
 var _prestige_dialog: ConfirmationDialog
 var _reset_dialog: ConfirmationDialog
@@ -574,11 +575,11 @@ func _build_prestige_tree_menu(root: Control) -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(920, 620)
-	panel.offset_left = -460.0
-	panel.offset_top = -310.0
-	panel.offset_right = 460.0
-	panel.offset_bottom = 310.0
+	panel.custom_minimum_size = Vector2(1080, 640)
+	panel.offset_left = -540.0
+	panel.offset_top = -320.0
+	panel.offset_right = 540.0
+	panel.offset_bottom = 320.0
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	UITheme.apply_panel_style(panel)
 	var panel_style := panel.get_theme_stylebox("panel") as StyleBoxFlat
@@ -616,7 +617,7 @@ func _build_prestige_tree_menu(root: Control) -> void:
 	var subtitle := Label.new()
 	subtitle.text = (
 		"Refactor points не зникають після prestige. "
-		+ "Скіли лишаються назавжди."
+		+ "Корінь — нескінченний; гілки — one-shot."
 	)
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	subtitle.add_theme_color_override("font_color", C_MUTED)
@@ -628,17 +629,81 @@ func _build_prestige_tree_menu(root: Control) -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	outer.add_child(scroll)
 
-	var list := VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 10)
-	scroll.add_child(list)
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 12)
+	scroll.add_child(content)
+
+	var root_panel := PanelContainer.new()
+	var root_style := StyleBoxFlat.new()
+	root_style.bg_color = Color(0.14, 0.10, 0.22, 0.98)
+	root_style.set_corner_radius_all(8)
+	root_style.set_border_width_all(2)
+	root_style.border_color = Color(C_PRESTIGE, 0.45)
+	root_style.content_margin_left = 14
+	root_style.content_margin_right = 14
+	root_style.content_margin_top = 12
+	root_style.content_margin_bottom = 12
+	root_panel.add_theme_stylebox_override("panel", root_style)
+	content.add_child(root_panel)
+
+	var root_box := VBoxContainer.new()
+	root_box.add_theme_constant_override("separation", 8)
+	root_panel.add_child(root_box)
+
+	var root_title := Label.new()
+	root_title.text = "◆ Стартап-енергія"
+	root_title.add_theme_color_override("font_color", C_PRESTIGE)
+	root_title.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME + 2)
+	root_box.add_child(root_title)
+
+	_prestige_root_level_label = Label.new()
+	_prestige_root_level_label.add_theme_color_override("font_color", Color(C_CYAN, 0.9))
+	_prestige_root_level_label.add_theme_font_size_override("font_size", FONT_BONUS_SMALL)
+	root_box.add_child(_prestige_root_level_label)
+
+	var root_desc := Label.new()
+	root_desc.text = PrestigeTree.root_def().get("desc", "")
+	root_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root_desc.add_theme_color_override("font_color", C_MUTED)
+	root_desc.add_theme_font_size_override("font_size", FONT_MEME)
+	root_box.add_child(root_desc)
+
+	_prestige_root_buy_btn = Button.new()
+	_prestige_root_buy_btn.custom_minimum_size = Vector2(0, 38)
+	_prestige_root_buy_btn.add_theme_font_size_override("font_size", FONT_UPGRADE_PRICE)
+	UITheme.style_button(_prestige_root_buy_btn, C_PRESTIGE)
+	_prestige_root_buy_btn.pressed.connect(_on_root_buy_pressed)
+	root_box.add_child(_prestige_root_buy_btn)
+
+	var branch_line := ColorRect.new()
+	branch_line.custom_minimum_size = Vector2(0, 1)
+	branch_line.color = Color(C_MUTED, 0.35)
+	content.add_child(branch_line)
+
+	var columns := HBoxContainer.new()
+	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.add_theme_constant_override("separation", 10)
+	content.add_child(columns)
 
 	for branch: String in PRESTIGE_BRANCH_ORDER:
-		_add_category_header(list, _prestige_branch_title(branch))
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", 8)
+		columns.add_child(col)
+
+		var branch_title := Label.new()
+		branch_title.text = _prestige_branch_title(branch)
+		branch_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		branch_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		branch_title.add_theme_color_override("font_color", C_PRESTIGE)
+		branch_title.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
+		col.add_child(branch_title)
+
 		for def: Dictionary in PrestigeTree.branch_nodes(branch):
 			var row := _create_skill_row(def)
 			_prestige_tree_rows[def["id"]] = row
-			list.add_child(row)
+			col.add_child(row)
 
 	if GameState.DEBUG_CHEATS:
 		_add_prestige_tree_tester_row(outer)
@@ -790,14 +855,14 @@ func _add_milestone_log_row(outer: VBoxContainer) -> void:
 
 func _prestige_branch_title(branch: String) -> String:
 	match branch:
-		"core":
-			return "Core · Основа"
-		"senior":
-			return "Senior · Клік"
-		"vibe":
-			return "Vibe · Пасив"
-		"qa":
-			return "QA · Якість"
+		"click":
+			return "Карпальний тунель"
+		"passive":
+			return "Промпт-інженер"
+		"bugs":
+			return "Staging — це прод"
+		"economy":
+			return "Раунд фінансування"
 		_:
 			return branch
 
@@ -842,7 +907,7 @@ func _create_skill_row(def: Dictionary) -> PanelContainer:
 
 	var meme := Label.new()
 	meme.name = "MemeLabel"
-	meme.text = def["meme"]
+	meme.text = str(def.get("desc", def.get("meme", "")))
 	meme.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	meme.add_theme_color_override("font_color", C_MUTED)
 	meme.add_theme_font_size_override("font_size", FONT_MEME)
@@ -878,6 +943,9 @@ func _create_skill_row(def: Dictionary) -> PanelContainer:
 func _skill_lock_text(def: Dictionary) -> String:
 	if GameState.has_skill(def["id"]):
 		return ""
+	var root_req := int(def.get("root_req", 0))
+	if GameState.root_level < root_req:
+		return "🔒 Потрібен корінь рівня %d" % root_req
 	var missing: PackedStringArray = []
 	for req_id: String in def.get("requires", []):
 		if not GameState.has_skill(req_id):
@@ -1280,9 +1348,24 @@ func _on_skill_buy_pressed(skill_id: String) -> void:
 	GameState.buy_skill(skill_id)
 
 
+func _on_root_buy_pressed() -> void:
+	GameState.buy_root_level()
+
+
 func _refresh_prestige_tree() -> void:
 	if _prestige_tree_points_label != null:
 		_prestige_tree_points_label.text = "%d refactor pts" % GameState.prestige_points
+
+	if _prestige_root_level_label != null:
+		_prestige_root_level_label.text = "Рівень %d · ×%.1f LoC" % [
+			GameState.root_level,
+			PrestigeTree.root_loc_mult(GameState.root_level),
+		]
+
+	if _prestige_root_buy_btn != null:
+		var root_cost := GameState.root_next_cost()
+		_prestige_root_buy_btn.text = "Прокачати (+10%%) · %d pts" % root_cost
+		_prestige_root_buy_btn.disabled = GameState.prestige_points < root_cost
 
 	if _milestone_log_label != null:
 		var fresh := GameState.get_milestone_log()

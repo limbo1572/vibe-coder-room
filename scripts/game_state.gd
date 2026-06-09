@@ -10,7 +10,7 @@ signal passive_gain(loc_gain: float)
 signal captcha_triggered
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SAVE_VERSION := 9
+const CURRENT_SAVE_VERSION := 10
 const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
 const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
 const AUTOSAVE_SEC := 10.0
@@ -49,6 +49,7 @@ var prestige_count: int = 0
 
 var upgrade_owned: Dictionary = {}
 var skill_owned: Dictionary = {}
+var root_level: int = 0
 
 var global_loc_mult: float = 1.0
 var click_mult_add: float = 0.0
@@ -310,6 +311,8 @@ func _reset_skill_modifiers() -> void:
 
 func _apply_skill_stat_modifiers() -> void:
 	for def: Dictionary in PrestigeTree.all():
+		if def.get("is_root", false):
+			continue
 		if not has_skill(def["id"]):
 			continue
 		for effect: Dictionary in def["effects"]:
@@ -344,6 +347,25 @@ func _apply_skill_stat_modifiers() -> void:
 					auto_qa_per_sec += value
 				PrestigeTree.EffectType.OFFLINE_PROGRESS:
 					offline_progress_enabled = true
+	if root_level > 0:
+		global_loc_mult *= PrestigeTree.root_loc_mult(root_level)
+
+
+func root_next_cost() -> int:
+	return 1 + int(floor(float(root_level) / 3.0))
+
+
+func buy_root_level() -> bool:
+	var c := root_next_cost()
+	if prestige_points < c:
+		return false
+	prestige_points -= c
+	root_level += 1
+	recalculate_stats()
+	_clamp_stats()
+	stats_changed.emit()
+	save_game()
+	return true
 
 
 func has_skill(skill_id: String) -> bool:
@@ -355,6 +377,10 @@ func can_buy_skill(skill_id: String) -> bool:
 		return false
 	var def := PrestigeTree.find(skill_id)
 	if def.is_empty():
+		return false
+	if def.get("is_root", false):
+		return false
+	if root_level < int(def.get("root_req", 0)):
 		return false
 	if prestige_points < int(def["cost"]):
 		return false
@@ -546,6 +572,7 @@ func save_game() -> void:
 		"prestige_mult": prestige_mult,
 		"upgrade_owned": upgrade_owned.duplicate(),
 		"skill_owned": skill_owned.duplicate(),
+		"root_level": root_level,
 		"last_tick_time": last_tick_time,
 		"total_play_time": total_play_time,
 		"click_unlocked": click_unlocked,
@@ -661,6 +688,12 @@ func load_game() -> bool:
 				skill_id = "sk_" + skill_id
 			skill_owned[skill_id] = bool(skills_raw[key])
 
+	root_level = int(data.get("root_level", 0))
+	if save_version < 10:
+		skill_owned.clear()
+		prestige_points = lifetime_prestige_points
+		root_level = 0
+
 	if _milestone_logger != null and MEASURE_MODE:
 		var ml: Dictionary = data.get("milestone_log", {})
 		if not ml.is_empty():
@@ -724,6 +757,7 @@ func _apply_default_state() -> void:
 	_spam_window_elapsed = 0.0
 	upgrade_owned.clear()
 	skill_owned.clear()
+	root_level = 0
 	_offline_summary = {}
 	_auto_click_timer = 0.0
 	last_tick_time = _now()
