@@ -96,6 +96,7 @@ var _prestige_tree_open_points: int = -1
 var _prestige_tree_open_skills: int = -1
 var _captcha_overlay: Control
 var _captcha_panel: Control
+var _prestige_intro_overlay: Control
 var _flavor_queue: Array[Dictionary] = []
 var _flavor_showing: bool = false
 
@@ -1786,12 +1787,101 @@ func _on_deploy_pressed() -> void:
 
 
 func _on_prestige_pressed() -> void:
+	if not GameState.seen_prestige_intro:
+		_show_prestige_intro()
+		return
+	_show_prestige_confirm_dialog()
+
+
+func _show_prestige_confirm_dialog() -> void:
 	var flavor := FlavorLines.prestige_text(GameState.prestige_count)
 	var cost := GameState.prestige_threshold()
 	_prestige_dialog.dialog_text = "%s\n\nРефактор коштує $%s. Отримаєш +1 очко престижу." % [
 		flavor, GameState.format_num(cost),
 	]
 	_prestige_dialog.popup_centered()
+
+
+func _show_prestige_intro() -> void:
+	if _prestige_intro_overlay == null:
+		var root := get_child(0) as Control
+		if root == null:
+			return
+		_build_prestige_intro_overlay(root)
+	if _prestige_intro_overlay != null:
+		_prestige_intro_overlay.visible = true
+
+
+func _build_prestige_intro_overlay(root: Control) -> void:
+	var overlay := Control.new()
+	_prestige_intro_overlay = overlay
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(dim)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(520, 280)
+	panel.offset_left = -260.0
+	panel.offset_top = -140.0
+	panel.offset_right = 260.0
+	panel.offset_bottom = 140.0
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.06, 0.10, 0.14, 0.97)
+	panel_style.set_corner_radius_all(8)
+	panel_style.set_border_width_all(2)
+	panel_style.border_color = Color(C_CYAN, 0.65)
+	panel_style.content_margin_left = 20
+	panel_style.content_margin_right = 20
+	panel_style.content_margin_top = 16
+	panel_style.content_margin_bottom = 16
+	panel.add_theme_stylebox_override("panel", panel_style)
+	overlay.add_child(panel)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 14)
+	panel.add_child(column)
+
+	var title := Label.new()
+	title.text = "🤖 Копілот"
+	title.add_theme_color_override("font_color", C_CYAN)
+	title.add_theme_font_size_override("font_size", 22)
+	column.add_child(title)
+
+	var body := Label.new()
+	body.text = (
+		"Стоп. Перш ніж ти видалиш усе…\n\n"
+		+ "Я бачу твій гаманець. Росте не по днях, а по годинах. І знаєш що? "
+		+ "Це я. Не ти.\n\n"
+		+ "Але давай, «рефактори». Почни з нуля. Цього разу буде чисто.\n\n"
+		+ "(Не буде. Але мені подобається твій оптимізм.)"
+	)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_theme_color_override("font_color", C_TEXT)
+	body.add_theme_font_size_override("font_size", 15)
+	column.add_child(body)
+
+	var btn := Button.new()
+	btn.text = "Видалити все"
+	btn.custom_minimum_size = Vector2(0, 42)
+	btn.add_theme_font_size_override("font_size", FONT_UPGRADE_PRICE)
+	UITheme.style_button(btn, C_CYAN)
+	btn.pressed.connect(_on_prestige_intro_continue)
+	column.add_child(btn)
+
+
+func _on_prestige_intro_continue() -> void:
+	GameState.mark_prestige_intro_seen()
+	if _prestige_intro_overlay != null:
+		_prestige_intro_overlay.visible = false
+	_show_prestige_confirm_dialog()
 
 
 func _on_prestige_confirmed() -> void:

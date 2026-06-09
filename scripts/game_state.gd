@@ -68,6 +68,7 @@ var click_unlocked: bool = false
 var hello_world_done: bool = false
 var hello_world_with_bug: bool = false
 var hello_world_hint_seen: bool = false
+var seen_prestige_intro: bool = false
 
 var total_clicks: int = 0
 var total_deploys: int = 0
@@ -368,6 +369,11 @@ func buy_root_level() -> bool:
 	return true
 
 
+func mark_prestige_intro_seen() -> void:
+	seen_prestige_intro = true
+	save_game()
+
+
 func has_skill(skill_id: String) -> bool:
 	return bool(skill_owned.get(skill_id, false))
 
@@ -579,6 +585,7 @@ func save_game() -> void:
 		"hello_world_done": hello_world_done,
 		"hello_world_with_bug": hello_world_with_bug,
 		"hello_world_hint_seen": hello_world_hint_seen,
+		"seen_prestige_intro": seen_prestige_intro,
 		"total_clicks": total_clicks,
 		"total_deploys": total_deploys,
 		"used_cheats": used_cheats,
@@ -657,6 +664,8 @@ func load_game() -> bool:
 		hello_world_done = bool(data.get("hello_world_done", false))
 		hello_world_with_bug = bool(data.get("hello_world_with_bug", false))
 		hello_world_hint_seen = bool(data.get("hello_world_hint_seen", false))
+
+	seen_prestige_intro = bool(data.get("seen_prestige_intro", false))
 
 	total_clicks = int(data.get("total_clicks", 0))
 	total_deploys = int(data.get("total_deploys", 0))
@@ -758,6 +767,7 @@ func _apply_default_state() -> void:
 	upgrade_owned.clear()
 	skill_owned.clear()
 	root_level = 0
+	seen_prestige_intro = false
 	_offline_summary = {}
 	_auto_click_timer = 0.0
 	last_tick_time = _now()
