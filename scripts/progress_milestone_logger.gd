@@ -25,8 +25,27 @@ var _log_lines: PackedStringArray = []
 func begin() -> void:
 	_enabled = true
 	_clicks = 0
+
+
+func serialize() -> Dictionary:
+	var lines: Array = []
+	for line in _log_lines:
+		lines.append(line)
+	return {
+		"log_lines": lines,
+		"hit": _hit.duplicate(),
+	}
+
+
+func restore(data: Dictionary) -> void:
+	var lines: Array = data.get("log_lines", [])
+	_log_lines = PackedStringArray()
+	for l in lines:
+		_log_lines.append(str(l))
+	var hit_raw: Dictionary = data.get("hit", {})
 	_hit.clear()
-	_log_lines.clear()
+	for k in hit_raw:
+		_hit[str(k)] = bool(hit_raw[k])
 
 
 func reset_session() -> void:
@@ -34,11 +53,13 @@ func reset_session() -> void:
 		return
 	_clicks = 0
 	_hit.clear()
-	_log_lines.clear()
+	_log_lines.append("--- prestige, new cycle ---")
 
 
 func sync_from_save(state: Node) -> void:
 	if not _enabled:
+		return
+	if not _hit.is_empty():
 		return
 
 	var total_upgrades := 0

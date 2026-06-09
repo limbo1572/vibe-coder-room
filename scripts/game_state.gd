@@ -565,6 +565,9 @@ func save_game() -> void:
 		"near_prestige": near_prestige,
 		"afk_return": afk_return,
 		"captcha_count": captcha_count,
+		"milestone_log": (
+			_milestone_logger.serialize() if (_milestone_logger != null and MEASURE_MODE) else {}
+		),
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -659,6 +662,11 @@ func load_game() -> bool:
 			if not skill_id.begins_with("sk_"):
 				skill_id = "sk_" + skill_id
 			skill_owned[skill_id] = bool(skills_raw[key])
+
+	if _milestone_logger != null and MEASURE_MODE:
+		var ml: Dictionary = data.get("milestone_log", {})
+		if not ml.is_empty():
+			_milestone_logger.restore(ml)
 
 	recalculate_stats()
 	_clamp_stats()
