@@ -225,7 +225,7 @@ func _build_top_bar(root: Control) -> void:
 	column.add_child(_prestige_button)
 
 	_prestige_tree_button = Button.new()
-	_prestige_tree_button.text = "🌳 Refactor tree"
+	_prestige_tree_button.text = "▲ Refactor tree"
 	_prestige_tree_button.custom_minimum_size = Vector2(0, 40)
 	_prestige_tree_button.visible = false
 	UITheme.style_button(_prestige_tree_button, C_PRESTIGE)
@@ -597,7 +597,7 @@ func _build_prestige_tree_menu(root: Control) -> void:
 	outer.add_child(header)
 
 	var title := Label.new()
-	title.text = "🌳 Refactor tree"
+	title.text = "▲ Refactor tree"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.add_theme_color_override("font_color", C_PRESTIGE)
 	title.add_theme_font_size_override("font_size", 24)
@@ -1658,7 +1658,7 @@ func _refresh_stats() -> void:
 
 	if _prestige_tree_button != null:
 		_prestige_tree_button.visible = GameState.click_unlocked
-		_prestige_tree_button.text = "🌳 Refactor tree · %d pts" % GameState.prestige_points
+		_prestige_tree_button.text = "▲ Refactor tree · %d pts" % GameState.prestige_points
 
 	_refresh_achievements_button()
 	if _achievements_button != null:
