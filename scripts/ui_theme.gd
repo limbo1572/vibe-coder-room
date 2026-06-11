@@ -17,6 +17,8 @@ const FONT_CATEGORY := 18
 const FONT_BONUS := 17
 const FONT_BONUS_SMALL := 16
 
+const MONO_FONT := preload("res://assets/fonts/JetBrainsMono-Regular.ttf")
+
 
 static func style_button(button: Button, accent: Color) -> void:
 	var normal := StyleBoxFlat.new()
@@ -33,6 +35,7 @@ static func style_button(button: Button, accent: Color) -> void:
 	button.add_theme_stylebox_override("pressed", normal)
 	button.add_theme_color_override("font_color", accent)
 	button.add_theme_color_override("font_disabled_color", C_MUTED)
+	button.add_theme_font_override("font", MONO_FONT)
 
 
 static func style_tab_button(button: Button, active: bool) -> void:

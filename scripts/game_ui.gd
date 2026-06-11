@@ -233,7 +233,7 @@ func _build_top_bar(root: Control) -> void:
 	column.add_child(_prestige_tree_button)
 
 	_achievements_button = Button.new()
-	_achievements_button.text = "★ Досягнення"
+	_achievements_button.text = "✶ Досягнення"
 	_achievements_button.custom_minimum_size = Vector2(0, 40)
 	_achievements_button.visible = false
 	UITheme.style_button(_achievements_button, C_CYAN)
@@ -601,6 +601,7 @@ func _build_prestige_tree_menu(root: Control) -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.add_theme_color_override("font_color", C_PRESTIGE)
 	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_override("font", MONO_FONT)
 	header.add_child(title)
 
 	_prestige_tree_points_label = Label.new()
@@ -656,6 +657,7 @@ func _build_prestige_tree_menu(root: Control) -> void:
 	root_title.text = "◆ Стартап-енергія"
 	root_title.add_theme_color_override("font_color", C_PRESTIGE)
 	root_title.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME + 2)
+	root_title.add_theme_font_override("font", MONO_FONT)
 	root_box.add_child(root_title)
 
 	var root_gate_hint := Label.new()
@@ -1018,7 +1020,7 @@ func _refresh_achievements_button() -> void:
 		return
 	var unlocked := Achievements.get_unlocked_count()
 	var total := Achievements.get_total_count()
-	_achievements_button.text = "★ Досягнення %d/%d" % [unlocked, total]
+	_achievements_button.text = "✶ Досягнення %d/%d" % [unlocked, total]
 
 
 func _refresh_achievements_panel() -> void:
@@ -1317,9 +1319,10 @@ func _show_achievement_toast(def: Dictionary) -> void:
 	banner.add_child(column)
 
 	var label := Label.new()
-	label.text = "★ Досягнення: %s" % achievement_name
+	label.text = "✶ Досягнення: %s" % achievement_name
 	label.add_theme_color_override("font_color", C_CYAN)
 	label.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
+	label.add_theme_font_override("font", MONO_FONT)
 	column.add_child(label)
 
 	var reward := float(def.get("reward_loc_mult", 0.0))
@@ -1864,6 +1867,7 @@ func _build_prestige_intro_overlay(root: Control) -> void:
 	title.text = "◉ Копілот"
 	title.add_theme_color_override("font_color", C_CYAN)
 	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_override("font", MONO_FONT)
 	column.add_child(title)
 
 	var body := Label.new()
