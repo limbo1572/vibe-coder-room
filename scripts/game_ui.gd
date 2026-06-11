@@ -233,7 +233,7 @@ func _build_top_bar(root: Control) -> void:
 	column.add_child(_prestige_tree_button)
 
 	_achievements_button = Button.new()
-	_achievements_button.text = "🏆 Досягнення"
+	_achievements_button.text = "★ Досягнення"
 	_achievements_button.custom_minimum_size = Vector2(0, 40)
 	_achievements_button.visible = false
 	UITheme.style_button(_achievements_button, C_CYAN)
@@ -658,6 +658,12 @@ func _build_prestige_tree_menu(root: Control) -> void:
 	root_title.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME + 2)
 	root_box.add_child(root_title)
 
+	var root_gate_hint := Label.new()
+	root_gate_hint.text = "Рівень кореня відкриває вузли гілок"
+	root_gate_hint.add_theme_color_override("font_color", C_MUTED)
+	root_gate_hint.add_theme_font_size_override("font_size", FONT_BONUS_SMALL)
+	root_box.add_child(root_gate_hint)
+
 	_prestige_root_level_label = Label.new()
 	_prestige_root_level_label.add_theme_color_override("font_color", Color(C_CYAN, 0.9))
 	_prestige_root_level_label.add_theme_font_size_override("font_size", FONT_BONUS_SMALL)
@@ -946,7 +952,7 @@ func _skill_lock_text(def: Dictionary) -> String:
 		return ""
 	var root_req := int(def.get("root_req", 0))
 	if GameState.root_level < root_req:
-		return "🔒 Потрібен корінь рівня %d" % root_req
+		return "Потрібен корінь рівня %d" % root_req
 	var missing: PackedStringArray = []
 	for req_id: String in def.get("requires", []):
 		if not GameState.has_skill(req_id):
@@ -1012,7 +1018,7 @@ func _refresh_achievements_button() -> void:
 		return
 	var unlocked := Achievements.get_unlocked_count()
 	var total := Achievements.get_total_count()
-	_achievements_button.text = "🏆 Досягнення %d/%d" % [unlocked, total]
+	_achievements_button.text = "★ Досягнення %d/%d" % [unlocked, total]
 
 
 func _refresh_achievements_panel() -> void:
@@ -1264,7 +1270,7 @@ func _show_flavor_banner(line: Dictionary) -> void:
 		label.add_theme_font_override("font", MONO_FONT)
 	else:
 		style.border_color = Color(C_CYAN, 0.65)
-		label.text = "🤖 Копілот: %s" % text
+		label.text = "◉ Копілот: %s" % text
 		label.add_theme_color_override("font_color", C_CYAN)
 
 	banner.add_child(label)
@@ -1311,7 +1317,7 @@ func _show_achievement_toast(def: Dictionary) -> void:
 	banner.add_child(column)
 
 	var label := Label.new()
-	label.text = "🏆 Досягнення: %s" % achievement_name
+	label.text = "★ Досягнення: %s" % achievement_name
 	label.add_theme_color_override("font_color", C_CYAN)
 	label.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
 	column.add_child(label)
@@ -1365,7 +1371,8 @@ func _refresh_prestige_tree() -> void:
 
 	if _prestige_root_buy_btn != null:
 		var root_cost := GameState.root_next_cost()
-		_prestige_root_buy_btn.text = "Прокачати (+25%%) · %d pts" % root_cost
+		var root_pct := int(round((PrestigeTree.ROOT_LOC_MULT - 1.0) * 100.0))
+		_prestige_root_buy_btn.text = "Прокачати (+%d%%) · %d pts" % [root_pct, root_cost]
 		_prestige_root_buy_btn.disabled = GameState.prestige_points < root_cost
 
 	if _milestone_log_label != null:
@@ -1392,7 +1399,11 @@ func _refresh_prestige_tree() -> void:
 			continue
 
 		if not lock_text.is_empty():
-			buy.text = "🔒 Заблоковано"
+			var root_req := int(def.get("root_req", 0))
+			if GameState.root_level < root_req:
+				buy.text = "Корінь %d+" % root_req
+			else:
+				buy.text = "Заблоковано"
 			buy.disabled = true
 			continue
 
@@ -1850,7 +1861,7 @@ func _build_prestige_intro_overlay(root: Control) -> void:
 	panel.add_child(column)
 
 	var title := Label.new()
-	title.text = "🤖 Копілот"
+	title.text = "◉ Копілот"
 	title.add_theme_color_override("font_color", C_CYAN)
 	title.add_theme_font_size_override("font_size", 22)
 	column.add_child(title)
