@@ -19,7 +19,7 @@ enum EffectType {
 }
 
 const ROOT_ID := "sk_root"
-const ROOT_LOC_MULT := 1.1
+const ROOT_LOC_MULT := 1.25
 
 
 static func all() -> Array[Dictionary]:

@@ -1365,7 +1365,7 @@ func _refresh_prestige_tree() -> void:
 
 	if _prestige_root_buy_btn != null:
 		var root_cost := GameState.root_next_cost()
-		_prestige_root_buy_btn.text = "Прокачати (+10%%) · %d pts" % root_cost
+		_prestige_root_buy_btn.text = "Прокачати (+25%%) · %d pts" % root_cost
 		_prestige_root_buy_btn.disabled = GameState.prestige_points < root_cost
 
 	if _milestone_log_label != null:
