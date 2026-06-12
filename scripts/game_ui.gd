@@ -94,6 +94,8 @@ var _passive_popup_timer: float = 0.0
 var _debug_skill_panel: PanelContainer
 var _debug_skill_status: Label
 var _milestone_log_label: TextEdit
+var _milestone_log_section: VBoxContainer
+var _milestone_log_toggle_btn: Button
 var _achievements_button: Button
 var _achievements_overlay: Control
 var _achievements_title_label: Label
@@ -873,20 +875,33 @@ func _export_milestone_log(text: String) -> void:
 
 
 func _add_milestone_log_row(outer: VBoxContainer) -> void:
+	_milestone_log_toggle_btn = Button.new()
+	_milestone_log_toggle_btn.text = "Показати дані балансу"
+	_milestone_log_toggle_btn.custom_minimum_size = Vector2(0, 36)
+	_milestone_log_toggle_btn.add_theme_font_size_override("font_size", 13)
+	UITheme.style_button(_milestone_log_toggle_btn, C_MUTED)
+	_milestone_log_toggle_btn.pressed.connect(_toggle_milestone_log)
+	outer.add_child(_milestone_log_toggle_btn)
+
+	_milestone_log_section = VBoxContainer.new()
+	_milestone_log_section.visible = false
+	_milestone_log_section.add_theme_constant_override("separation", 8)
+	outer.add_child(_milestone_log_section)
+
 	var copy_hint := Label.new()
 	copy_hint.text = "Тисни «Завантажити дані» — браузер збереже файл. Скинь його розробнику:"
 	copy_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	copy_hint.add_theme_color_override("font_color", C_MUTED)
 	copy_hint.add_theme_font_size_override("font_size", 12)
-	outer.add_child(copy_hint)
+	_milestone_log_section.add_child(copy_hint)
 
 	_milestone_log_label = TextEdit.new()
 	_milestone_log_label.editable = false
-	_milestone_log_label.scroll_fit_content_height = true
-	_milestone_log_label.custom_minimum_size = Vector2(0, 160)
+	_milestone_log_label.scroll_fit_content_height = false
+	_milestone_log_label.custom_minimum_size = Vector2(0, 180)
 	_milestone_log_label.add_theme_font_size_override("font_size", 12)
 	_milestone_log_label.text = GameState.get_milestone_log()
-	outer.add_child(_milestone_log_label)
+	_milestone_log_section.add_child(_milestone_log_label)
 
 	var copy_btn := Button.new()
 	copy_btn.text = "Завантажити дані"
@@ -902,7 +917,26 @@ func _add_milestone_log_row(outer: VBoxContainer) -> void:
 				copy_btn.text = "Завантажити дані"
 		)
 	)
-	outer.add_child(copy_btn)
+	_milestone_log_section.add_child(copy_btn)
+
+
+func _toggle_milestone_log() -> void:
+	if _milestone_log_section == null or _milestone_log_toggle_btn == null:
+		return
+	_milestone_log_section.visible = not _milestone_log_section.visible
+	if _milestone_log_section.visible:
+		_milestone_log_toggle_btn.text = "Сховати дані балансу"
+		if _milestone_log_label != null:
+			_milestone_log_label.text = GameState.get_milestone_log()
+	else:
+		_milestone_log_toggle_btn.text = "Показати дані балансу"
+
+
+func _hide_milestone_log() -> void:
+	if _milestone_log_section != null:
+		_milestone_log_section.visible = false
+	if _milestone_log_toggle_btn != null:
+		_milestone_log_toggle_btn.text = "Показати дані балансу"
 
 
 func _prestige_branch_title(branch: String) -> String:
@@ -1028,6 +1062,7 @@ func _close_prestige_tree() -> void:
 			Achievements.unlock_by_event("just_looking")
 	_prestige_tree_open_points = -1
 	_prestige_tree_open_skills = -1
+	_hide_milestone_log()
 	_prestige_tree_overlay.visible = false
 
 
@@ -1421,7 +1456,7 @@ func _refresh_prestige_tree() -> void:
 		_prestige_root_buy_btn.text = "Прокачати (+%d%%) · %d pts" % [root_pct, root_cost]
 		_prestige_root_buy_btn.disabled = GameState.prestige_points < root_cost
 
-	if _milestone_log_label != null:
+	if _milestone_log_label != null and _milestone_log_section != null and _milestone_log_section.visible:
 		var fresh := GameState.get_milestone_log()
 		if _milestone_log_label.text != fresh:
 			_milestone_log_label.text = fresh
