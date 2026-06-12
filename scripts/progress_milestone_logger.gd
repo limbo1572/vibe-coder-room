@@ -57,6 +57,24 @@ func reset_session(state: Node = null) -> void:
 	_log_lines.append(_cycle_marker_line(state))
 
 
+func mark_greenfield_start() -> void:
+	if not _enabled:
+		return
+	_log_lines.append("--- greenfield: clean run start ---")
+
+
+func copy_log_lines() -> PackedStringArray:
+	return _log_lines.duplicate()
+
+
+func append_archive(lines: PackedStringArray) -> void:
+	if not _enabled:
+		return
+	_log_lines.append("--- greenfield run archive (merged on stash pop) ---")
+	for line: String in lines:
+		_log_lines.append(line)
+
+
 func sync_from_save(state: Node) -> void:
 	if not _enabled:
 		return

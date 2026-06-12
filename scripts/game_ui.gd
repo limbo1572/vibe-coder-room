@@ -70,6 +70,8 @@ var _reset_dialog: ConfirmationDialog
 var _reset_reflog_button: Button
 var _reset_confirm_timer: Timer
 var _reset_ok_countdown: int = 0
+var _greenfield_button: Button
+var _greenfield_dialog: ConfirmationDialog
 var _popup_layer: Control
 var _upgrade_list: VBoxContainer
 var _upgrade_rows: Dictionary = {}
@@ -199,6 +201,7 @@ func _build_ui() -> void:
 	_build_bonuses_panel(root)
 	_build_bottom_bar(root)
 	_build_reset_button(root)
+	_build_greenfield_dialog()
 	_build_prestige_tree_menu(root)
 	_build_achievements_menu(root)
 	if GameState.DEBUG_CHEATS:
@@ -576,6 +579,27 @@ func _build_reset_button(root: Control) -> void:
 	UITheme.style_button(btn, C_RED)
 	btn.pressed.connect(_on_reset_pressed)
 	root.add_child(btn)
+
+	_greenfield_button = Button.new()
+	_greenfield_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_greenfield_button.offset_left = -(UPGRADE_PANEL_WIDTH + UPGRADE_PANEL_MARGIN + 180.0 + 248.0)
+	_greenfield_button.offset_top = -52.0
+	_greenfield_button.offset_right = -(UPGRADE_PANEL_WIDTH + UPGRADE_PANEL_MARGIN + 180.0 + 8.0)
+	_greenfield_button.offset_bottom = -16.0
+	_greenfield_button.add_theme_font_size_override("font_size", 12)
+	_greenfield_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_greenfield_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	_greenfield_button.visible = GameState.MEASURE_MODE
+	UITheme.style_button(_greenfield_button, C_CYAN)
+	_greenfield_button.pressed.connect(_on_greenfield_pressed)
+	root.add_child(_greenfield_button)
+
+
+func _build_greenfield_dialog() -> void:
+	_greenfield_dialog = ConfirmationDialog.new()
+	_greenfield_dialog.cancel_button_text = "Може потім"
+	_greenfield_dialog.confirmed.connect(_on_greenfield_confirmed)
+	add_child(_greenfield_dialog)
 
 
 func _build_prestige_tree_menu(root: Control) -> void:
@@ -1536,6 +1560,7 @@ func _refresh_all() -> void:
 	_refresh_bonuses()
 	_refresh_prestige_tree()
 	_refresh_debug_skill_panel()
+	_refresh_greenfield_button()
 
 
 func _refresh_onboarding() -> void:
@@ -1992,6 +2017,48 @@ func _on_reset_confirm_tick() -> void:
 		_stop_reset_ok_countdown()
 	else:
 		_update_reset_ok_button_text()
+
+
+func _refresh_greenfield_button() -> void:
+	if _greenfield_button == null:
+		return
+	_greenfield_button.visible = GameState.MEASURE_MODE
+	if not GameState.MEASURE_MODE:
+		return
+	if GameState.has_stash():
+		_greenfield_button.text = "git stash pop — повернути прогрес"
+	else:
+		_greenfield_button.text = "git stash → Великий Перепис"
+
+
+func _on_greenfield_pressed() -> void:
+	if _greenfield_dialog == null:
+		return
+	if GameState.has_stash():
+		_greenfield_dialog.title = "git stash pop"
+		_greenfield_dialog.dialog_text = (
+			"Повернути збережений прогрес? Поточний чистий "
+			+ "забіг буде заархівовано в лог."
+		)
+		_greenfield_dialog.ok_button_text = "Повернути прогрес"
+	else:
+		_greenfield_dialog.title = "Великий Перепис (тестерам)"
+		_greenfield_dialog.dialog_text = (
+			"Прогрес стане в stash і повернеться за одним кліком. "
+			+ "Чистий забіг допоможе виміряти нову криву. Бонус: ачівка."
+		)
+		_greenfield_dialog.ok_button_text = "Переписати з нуля"
+	_greenfield_dialog.popup_centered()
+
+
+func _on_greenfield_confirmed() -> void:
+	var ok := false
+	if GameState.has_stash():
+		ok = GameState.stash_pop()
+	else:
+		ok = GameState.start_greenfield()
+	if ok:
+		_refresh_all()
 
 
 func _on_upgrade_buy_pressed(upgrade_id: String) -> void:

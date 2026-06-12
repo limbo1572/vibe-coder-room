@@ -143,6 +143,12 @@ const DEFS: Array[Dictionary] = [
 		"desc": "Window shopping для бідних.",
 		"hidden": false,
 	},
+	{
+		"id": "ach_greenfield",
+		"name": "Великий Перепис",
+		"desc": "Переписав усе з нуля. Як справжній сіньйор.",
+		"hidden": false,
+	},
 ]
 
 var unlocked: Dictionary = {}
