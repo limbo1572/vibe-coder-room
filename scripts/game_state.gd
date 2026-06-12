@@ -660,6 +660,9 @@ func load_game() -> bool:
 		lifetime_prestige_points = maxi(from_mult, prestige_points)
 	else:
 		lifetime_prestige_points = saved_lifetime
+	# авто-множник прибрано в новій системі престижу; у старих сейвах
+	# (включно з уже мігрованими на v10) могло лишитись значення > 1
+	prestige_mult = 1.0
 	total_play_time = float(data.get("total_play_time", 0.0))
 
 	var save_version := int(data.get("save_version", 0))
@@ -1008,10 +1011,10 @@ func prestige() -> int:
 	money = maxf(0.0, money - spent) + prestige_start_money
 
 	stats_changed.emit()
-	save_game()
-	last_tick_time = _now()
 	if _milestone_logger != null:
 		_milestone_logger.on_prestige(self)
+	save_game()
+	last_tick_time = _now()
 	return new_points
 
 
