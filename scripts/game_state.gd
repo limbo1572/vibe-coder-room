@@ -28,6 +28,7 @@ const BASE_LOC_PER_CLICK := 1.0
 const BASE_LOC_PER_SEC := 0.0
 const BASE_DEPLOY_RATE := 0.10
 const BASE_QA_POWER := 0.0
+const COPILOT_TRIAL_MULT := 2.0  # буст новачка до 1-го престижу ("trial Копілота")
 
 const PRESTIGE_BASE_THRESHOLD := 10_000.0
 const PRESTIGE_THRESHOLD_STEP := 3.0
@@ -350,6 +351,12 @@ func _apply_skill_stat_modifiers() -> void:
 					offline_progress_enabled = true
 	if root_level > 0:
 		global_loc_mult *= PrestigeTree.root_loc_mult(root_level)
+	if prestige_count == 0:
+		global_loc_mult *= COPILOT_TRIAL_MULT
+
+
+func copilot_trial_active() -> bool:
+	return prestige_count == 0
 
 
 func root_next_cost() -> int:

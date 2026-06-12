@@ -55,6 +55,7 @@ var _loc_label: Label
 var _money_label: Label
 var _bugs_label: Label
 var _prod_label: Label
+var _copilot_trial_label: Label
 var _rate_label: Label
 var _deploy_button: Button
 var _prestige_button: Button
@@ -212,8 +213,13 @@ func _build_top_bar(root: Control) -> void:
 	_money_label = UITheme.make_stat_label("¤ Гроші: $0", MONO_FONT)
 	_bugs_label = UITheme.make_stat_label("● Баги: 0", MONO_FONT)
 	_prod_label = UITheme.make_stat_label("⚡ Продуктивність: 100%", MONO_FONT)
+	_copilot_trial_label = UITheme.make_stat_label(
+		"◉ Copilot Trial: ×%.0f LoC" % GameState.COPILOT_TRIAL_MULT,
+		MONO_FONT,
+	)
+	_copilot_trial_label.add_theme_color_override("font_color", C_CYAN)
 	_rate_label = UITheme.make_stat_label("↗ +0 код/с", MONO_FONT)
-	for label: Label in [_loc_label, _money_label, _bugs_label, _prod_label, _rate_label]:
+	for label: Label in [_loc_label, _money_label, _bugs_label, _prod_label, _copilot_trial_label, _rate_label]:
 		column.add_child(label)
 
 	_prestige_button = Button.new()
@@ -1638,6 +1644,12 @@ func _refresh_stats() -> void:
 		_bugs_label.add_theme_color_override("font_color", C_TEXT)
 
 	_prod_label.text = "⚡ Продуктивність: %.0f%%" % (prod * 100.0)
+
+	if _copilot_trial_label != null:
+		_copilot_trial_label.text = (
+			"◉ Copilot Trial: ×%.0f LoC" % GameState.COPILOT_TRIAL_MULT
+		)
+		_copilot_trial_label.visible = GameState.copilot_trial_active()
 
 	var raw_rate := GameState.loc_per_sec * GameState.prestige_mult
 	var effective := raw_rate * prod
