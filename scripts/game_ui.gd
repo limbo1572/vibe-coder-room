@@ -67,6 +67,9 @@ var _prestige_root_buy_btn: Button
 var _prestige_tree_rows: Dictionary = {}
 var _prestige_dialog: ConfirmationDialog
 var _reset_dialog: ConfirmationDialog
+var _reset_reflog_button: Button
+var _reset_confirm_timer: Timer
+var _reset_ok_countdown: int = 0
 var _popup_layer: Control
 var _upgrade_list: VBoxContainer
 var _upgrade_rows: Dictionary = {}
@@ -166,12 +169,22 @@ func _build_reset_dialog() -> void:
 	_reset_dialog.title = "git reset --hard"
 	_reset_dialog.dialog_text = (
 		"Видалити весь прогрес і почати з чистого репозиторію? "
-		+ "Це незворотньо. (git reset --hard)"
+		+ "git reflog памʼятає все. (git reset --hard)"
 	)
 	_reset_dialog.ok_button_text = "Так, reset --hard"
 	_reset_dialog.cancel_button_text = "Ні, ще покоджу"
 	_reset_dialog.confirmed.connect(_on_reset_confirmed)
+	_reset_dialog.canceled.connect(_on_reset_dialog_closed)
+	_reset_reflog_button = _reset_dialog.add_button(
+		"git reflog — відновити", true, "reflog"
+	)
+	_reset_dialog.custom_action.connect(_on_reset_custom_action)
 	add_child(_reset_dialog)
+
+	_reset_confirm_timer = Timer.new()
+	_reset_confirm_timer.wait_time = 1.0
+	_reset_confirm_timer.timeout.connect(_on_reset_confirm_tick)
+	add_child(_reset_confirm_timer)
 
 
 func _build_ui() -> void:
@@ -1916,11 +1929,69 @@ func _on_prestige_confirmed() -> void:
 
 
 func _on_reset_pressed() -> void:
+	_refresh_reset_reflog_button()
+	_begin_reset_ok_countdown()
 	_reset_dialog.popup_centered()
 
 
 func _on_reset_confirmed() -> void:
+	_stop_reset_ok_countdown()
 	GameState.reset_progress()
+
+
+func _on_reset_dialog_closed() -> void:
+	_stop_reset_ok_countdown()
+
+
+func _on_reset_custom_action(action: StringName) -> void:
+	if action != &"reflog":
+		return
+	if GameState.restore_from_reflog():
+		_reset_dialog.hide()
+		_refresh_all()
+
+
+func _refresh_reset_reflog_button() -> void:
+	if _reset_reflog_button == null:
+		return
+	var has_backup := GameState.has_reflog()
+	_reset_reflog_button.visible = has_backup
+	_reset_reflog_button.disabled = not has_backup
+
+
+func _begin_reset_ok_countdown() -> void:
+	_stop_reset_ok_countdown()
+	var ok := _reset_dialog.get_ok_button()
+	_reset_ok_countdown = 2
+	ok.disabled = true
+	_update_reset_ok_button_text()
+	_reset_confirm_timer.start()
+
+
+func _stop_reset_ok_countdown() -> void:
+	if _reset_confirm_timer != null:
+		_reset_confirm_timer.stop()
+	_reset_ok_countdown = 0
+	if _reset_dialog != null:
+		var ok := _reset_dialog.get_ok_button()
+		ok.disabled = false
+		ok.text = "Так, reset --hard"
+
+
+func _update_reset_ok_button_text() -> void:
+	var ok := _reset_dialog.get_ok_button()
+	if _reset_ok_countdown > 0:
+		ok.text = "Так, reset --hard (%d)" % _reset_ok_countdown
+	else:
+		ok.text = "Так, reset --hard"
+
+
+func _on_reset_confirm_tick() -> void:
+	_reset_ok_countdown -= 1
+	if _reset_ok_countdown <= 0:
+		_stop_reset_ok_countdown()
+	else:
+		_update_reset_ok_button_text()
 
 
 func _on_upgrade_buy_pressed(upgrade_id: String) -> void:

@@ -10,6 +10,7 @@ signal passive_gain(loc_gain: float)
 signal captcha_triggered
 
 const SAVE_PATH := "user://save.json"
+const REFLOG_PATH := "user://save_reflog.json"
 const CURRENT_SAVE_VERSION := 10
 const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
 const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
@@ -739,7 +740,24 @@ func load_game() -> bool:
 
 
 func reset_progress() -> void:
+	save_game()
+	_copy_user_file(SAVE_PATH, REFLOG_PATH)
 	_abort_save_and_reset("manual reset")
+
+
+func has_reflog() -> bool:
+	return FileAccess.file_exists(REFLOG_PATH)
+
+
+func restore_from_reflog() -> bool:
+	if not has_reflog():
+		return false
+	if not _copy_user_file(REFLOG_PATH, SAVE_PATH):
+		return false
+	if not load_game():
+		return false
+	stats_changed.emit()
+	return true
 
 
 func _apply_default_state() -> void:
@@ -804,6 +822,22 @@ func _delete_save_file() -> void:
 		var err := dir.remove("save.json")
 		if err != OK:
 			push_warning("GameState: failed to delete save (err %d)" % err)
+
+
+func _copy_user_file(from_path: String, to_path: String) -> bool:
+	if not FileAccess.file_exists(from_path):
+		return false
+	var src := FileAccess.open(from_path, FileAccess.READ)
+	if src == null:
+		return false
+	var bytes := src.get_buffer(src.get_length())
+	src.close()
+	var dst := FileAccess.open(to_path, FileAccess.WRITE)
+	if dst == null:
+		return false
+	dst.store_buffer(bytes)
+	dst.close()
+	return true
 
 
 func _validate_save_data(data: Dictionary) -> bool:
