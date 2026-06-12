@@ -10,6 +10,8 @@ const KEY_MONEY_1M := "money_1m"
 const KEY_PRESTIGE_THRESHOLD := "prestige_threshold"
 const KEY_FIRST_PRESTIGE := "first_prestige"
 
+const GREENFIELD_START_MARKER := "--- greenfield: clean run start ---"
+
 const MONEY_THRESHOLDS := [
 	{"key": KEY_MONEY_100, "amount": 100.0, "label": "$100 reached"},
 	{"key": KEY_MONEY_1000, "amount": 1000.0, "label": "$1000 reached"},
@@ -60,11 +62,20 @@ func reset_session(state: Node = null) -> void:
 func mark_greenfield_start() -> void:
 	if not _enabled:
 		return
-	_log_lines.append("--- greenfield: clean run start ---")
+	_log_lines.append(GREENFIELD_START_MARKER)
 
 
-func copy_log_lines() -> PackedStringArray:
-	return _log_lines.duplicate()
+func copy_lines_since_greenfield() -> PackedStringArray:
+	var start_idx := -1
+	for i: int in range(_log_lines.size()):
+		if _log_lines[i] == GREENFIELD_START_MARKER:
+			start_idx = i
+	if start_idx < 0:
+		return PackedStringArray()
+	var result := PackedStringArray()
+	for i: int in range(start_idx, _log_lines.size()):
+		result.append(_log_lines[i])
+	return result
 
 
 func append_archive(lines: PackedStringArray) -> void:

@@ -289,6 +289,11 @@ func _has_any_upgrade(gs: Node) -> bool:
 	return false
 
 
+func reset_unlocked() -> void:
+	unlocked.clear()
+	save_unlocked()
+
+
 func save_unlocked() -> void:
 	var data := {"unlocked": unlocked.duplicate()}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)

@@ -12,6 +12,8 @@ signal captcha_triggered
 const SAVE_PATH := "user://save.json"
 const REFLOG_PATH := "user://save_reflog.json"
 const STASH_PATH := "user://save_stash.json"
+const ACHIEVEMENTS_PATH := "user://achievements.json"
+const ACH_STASH_PATH := "user://achievements_stash.json"
 const CURRENT_SAVE_VERSION := 10
 const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
 const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
@@ -756,8 +758,13 @@ func start_greenfield() -> bool:
 	save_game()
 	if not _copy_user_file(SAVE_PATH, STASH_PATH):
 		return false
+	if FileAccess.file_exists(ACHIEVEMENTS_PATH):
+		_copy_user_file(ACHIEVEMENTS_PATH, ACH_STASH_PATH)
 	if Achievements != null:
+		Achievements.reset_unlocked()
+		recalculate_stats()
 		Achievements.unlock_by_event("ach_greenfield")
+		recalculate_stats()
 	if _milestone_logger != null:
 		_milestone_logger.mark_greenfield_start()
 	_abort_save_and_reset("greenfield clean run")
@@ -769,16 +776,22 @@ func stash_pop() -> bool:
 		return false
 	var archived := PackedStringArray()
 	if _milestone_logger != null:
-		archived = _milestone_logger.copy_log_lines()
+		archived = _milestone_logger.copy_lines_since_greenfield()
 	if not _copy_user_file(STASH_PATH, SAVE_PATH):
 		return false
 	if not load_game():
 		return false
-	if _milestone_logger != null:
-		_milestone_logger.append_archive(archived)
+	if FileAccess.file_exists(ACH_STASH_PATH):
+		_copy_user_file(ACH_STASH_PATH, ACHIEVEMENTS_PATH)
+		if Achievements != null:
+			Achievements.load_unlocked()
 	if Achievements != null:
 		Achievements.unlock_by_event("ach_greenfield")
+		recalculate_stats()
+	if _milestone_logger != null:
+		_milestone_logger.append_archive(archived)
 	_delete_stash_file()
+	_delete_ach_stash_file()
 	save_game()
 	stats_changed.emit()
 	return true
@@ -887,6 +900,16 @@ func _delete_stash_file() -> void:
 		var err := dir.remove("save_stash.json")
 		if err != OK:
 			push_warning("GameState: failed to delete stash (err %d)" % err)
+
+
+func _delete_ach_stash_file() -> void:
+	var dir := DirAccess.open("user://")
+	if dir == null:
+		return
+	if dir.file_exists("achievements_stash.json"):
+		var err := dir.remove("achievements_stash.json")
+		if err != OK:
+			push_warning("GameState: failed to delete achievements stash (err %d)" % err)
 
 
 func _validate_save_data(data: Dictionary) -> bool:
