@@ -11,6 +11,7 @@ const KEY_PRESTIGE_THRESHOLD := "prestige_threshold"
 const KEY_FIRST_PRESTIGE := "first_prestige"
 
 const GREENFIELD_START_MARKER := "--- greenfield: clean run start ---"
+const CHEAT_BANNER := "--- CHEATS DETECTED (used_cheats=true) — dump invalid for balance ---"
 
 const MONEY_THRESHOLDS := [
 	{"key": KEY_MONEY_100, "amount": 100.0, "label": "$100 reached"},
@@ -212,9 +213,12 @@ func _log(label: String, state: Node, offline: bool = false) -> void:
 
 
 func get_log_text() -> String:
-	if _log_lines.is_empty():
-		return "Поки немає віх. Грай далі — дані з'являться."
-	return "\n".join(_log_lines)
+	var body := "Поки немає віх. Грай далі — дані з'являться."
+	if not _log_lines.is_empty():
+		body = "\n".join(_log_lines)
+	if typeof(GameState) != TYPE_NIL and GameState != null and GameState.used_cheats:
+		return CHEAT_BANNER + "\n" + body
+	return body
 
 
 func has_log() -> bool:

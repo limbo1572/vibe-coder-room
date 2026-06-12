@@ -96,6 +96,7 @@ var _debug_skill_status: Label
 var _milestone_log_label: TextEdit
 var _milestone_log_section: VBoxContainer
 var _milestone_log_toggle_btn: Button
+var _milestone_cheat_warning: Label
 var _achievements_button: Button
 var _achievements_overlay: Control
 var _achievements_title_label: Label
@@ -883,6 +884,15 @@ func _add_milestone_log_row(outer: VBoxContainer) -> void:
 	_milestone_log_toggle_btn.pressed.connect(_toggle_milestone_log)
 	outer.add_child(_milestone_log_toggle_btn)
 
+	_milestone_cheat_warning = Label.new()
+	_milestone_cheat_warning.text = "Ці дані містять читерські забіги — не для балансу."
+	_milestone_cheat_warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_milestone_cheat_warning.add_theme_color_override("font_color", Color("#ff5555"))
+	_milestone_cheat_warning.add_theme_font_size_override("font_size", 12)
+	_milestone_cheat_warning.add_theme_font_override("font", MONO_FONT)
+	_milestone_cheat_warning.visible = GameState.used_cheats
+	outer.add_child(_milestone_cheat_warning)
+
 	_milestone_log_section = VBoxContainer.new()
 	_milestone_log_section.visible = false
 	_milestone_log_section.add_theme_constant_override("separation", 8)
@@ -924,6 +934,7 @@ func _toggle_milestone_log() -> void:
 	if _milestone_log_section == null or _milestone_log_toggle_btn == null:
 		return
 	_milestone_log_section.visible = not _milestone_log_section.visible
+	_refresh_milestone_cheat_warning()
 	if _milestone_log_section.visible:
 		_milestone_log_toggle_btn.text = "Сховати дані балансу"
 		if _milestone_log_label != null:
@@ -937,6 +948,12 @@ func _hide_milestone_log() -> void:
 		_milestone_log_section.visible = false
 	if _milestone_log_toggle_btn != null:
 		_milestone_log_toggle_btn.text = "Показати дані балансу"
+
+
+func _refresh_milestone_cheat_warning() -> void:
+	if _milestone_cheat_warning == null:
+		return
+	_milestone_cheat_warning.visible = GameState.used_cheats
 
 
 func _prestige_branch_title(branch: String) -> String:
@@ -1455,6 +1472,8 @@ func _refresh_prestige_tree() -> void:
 		var root_pct := int(round((PrestigeTree.ROOT_LOC_MULT - 1.0) * 100.0))
 		_prestige_root_buy_btn.text = "Прокачати (+%d%%) · %d pts" % [root_pct, root_cost]
 		_prestige_root_buy_btn.disabled = GameState.prestige_points < root_cost
+
+	_refresh_milestone_cheat_warning()
 
 	if _milestone_log_label != null and _milestone_log_section != null and _milestone_log_section.visible:
 		var fresh := GameState.get_milestone_log()
