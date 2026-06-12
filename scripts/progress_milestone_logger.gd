@@ -80,7 +80,7 @@ func sync_from_save(state: Node) -> void:
 	if state.has_method("prestige_threshold") and money >= float(state.prestige_threshold()):
 		_mark_offline_prestige_threshold(state)
 
-	if float(state.prestige_mult) > 1.001:
+	if int(state.get("prestige_count")) >= 1:
 		_mark_offline_hit(KEY_FIRST_PRESTIGE, "first prestige", state)
 
 
@@ -102,7 +102,7 @@ func on_deploy(state: Node) -> void:
 
 func on_prestige(state: Node) -> void:
 	_try_hit(KEY_FIRST_PRESTIGE, "first prestige", state)
-	_hit.erase(KEY_PRESTIGE_THRESHOLD)
+	_hit.clear()
 	_log_lines.append(_cycle_marker_line(state))
 
 

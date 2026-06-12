@@ -994,6 +994,7 @@ func prestige() -> int:
 	var new_points := preview_prestige_points()
 	prestige_points += new_points
 	lifetime_prestige_points += new_points
+	prestige_count += 1
 
 	loc = 0.0
 	bugs = 0.0
@@ -1005,7 +1006,6 @@ func prestige() -> int:
 	_flavor_bug_level_5 = false
 	recalculate_stats()
 	money = maxf(0.0, money - spent) + prestige_start_money
-	prestige_count += 1
 
 	stats_changed.emit()
 	save_game()
