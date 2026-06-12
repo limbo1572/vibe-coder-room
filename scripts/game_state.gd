@@ -781,7 +781,7 @@ func _apply_default_state() -> void:
 	total_play_time = 0.0
 	recalculate_stats()
 	if _milestone_logger != null and MEASURE_MODE:
-		_milestone_logger.reset_session()
+		_milestone_logger.reset_session(self)
 
 
 func _abort_save_and_reset(reason: String = "") -> void:
