@@ -737,6 +737,8 @@ func load_game() -> bool:
 		var offline_gap := now - saved_tick
 		if offline_gap >= 172800.0:
 			afk_return = true
+			if Achievements != null and not Achievements.is_unlocked("afk_return"):
+				Achievements.call_deferred("unlock_by_event", "afk_return")
 	if saved_tick > 0.0 and offline_progress_enabled:
 		var elapsed := minf(now - saved_tick, OFFLINE_CAP_SEC)
 		if elapsed > 0.0:

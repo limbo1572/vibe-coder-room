@@ -1175,8 +1175,8 @@ func _create_achievement_row(def: Dictionary) -> PanelContainer:
 			reward_label.add_theme_font_size_override("font_size", FONT_MEME)
 			box.add_child(reward_label)
 	elif is_hidden:
-		name.text = "???"
-		desc.text = "Прихована ачівка"
+		name.text = def["name"]
+		desc.text = def.get("hint_masked", "Умову приховано")
 		name.add_theme_color_override("font_color", C_MUTED)
 		desc.add_theme_color_override("font_color", C_MUTED)
 	else:
@@ -1187,6 +1187,15 @@ func _create_achievement_row(def: Dictionary) -> PanelContainer:
 
 	box.add_child(name)
 	box.add_child(desc)
+	if not is_unlocked and not is_hidden:
+		var hint_text := str(def.get("hint", ""))
+		if not hint_text.is_empty():
+			var hint_label := Label.new()
+			hint_label.text = hint_text
+			hint_label.add_theme_font_size_override("font_size", FONT_MEME)
+			hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			hint_label.add_theme_color_override("font_color", C_MUTED)
+			box.add_child(hint_label)
 	return row
 
 
