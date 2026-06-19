@@ -1,4 +1,4 @@
-"""Бот-гравець Vibe Coder Tycoon. Усі формули — 1:1 з game_state.gd (dc289a2).
+"""Бот-гравець Vibe Coder Tycoon. Усі формули — 1:1 з game_state.gd (HEAD: prestige money reset + kickstart).
 Мета: час кожного циклу престижу. Критерій здоров'я: ріст часу циклу <= x1.5."""
 import math
 
@@ -35,6 +35,7 @@ class Sim:
         if tools: self.tree.update(TOOLS_BRANCH)
         self.points=0; self.root=0; self.owned_sk=set()
         self.prestige_count=0; self.results=[]
+        self.kickstart_active = False
         self.reset_run()
     def reset_run(self):
         self.loc=0.0; self.money=0.0; self.bugs=0.0
@@ -59,7 +60,9 @@ class Sim:
             elif kind=="bug_rate": bug_mult*=v
             elif kind=="auto_click": auto_click+=v
             elif kind=="auto_qa": auto_qa+=v
-        pm=1.25**self.root
+        trial = 2.0 if self.prestige_count == 0 else 1.0
+        kick = 2.0 if self.kickstart_active else 1.0
+        pm = 1.25**self.root * trial * kick
         cost_mult=0.9 if "sk_cloud_discount" in self.owned_sk else 1.0
         return dict(lps=lps*sec_mult, lpc=lpc*click_mult, qa=qa*qa_mult,
                     rate=rate*deploy_mult, pm=pm, bug_mult=bug_mult,
@@ -142,11 +145,14 @@ class Sim:
             if since_deploy>=DEPLOY_EVERY and self.loc>0:
                 self.money+=self.loc*s["rate"]*s["pm"]*math.sqrt(self.prod())
                 self.loc=0.0; since_deploy=0.0
+                if self.kickstart_active and self.money >= 10_000.0:
+                    self.kickstart_active = False
             while self.try_buy(self.stats()): pass
             if self.money>=threshold:
-                self.money-=threshold; self.points+=1; self.prestige_count+=1
+                self.points+=1; self.prestige_count+=1
                 self.results.append(t/60.0)
                 self.spend_points(); self.reset_run()
+                self.kickstart_active = True
                 return True
             t+=dt
         self.results.append(float("inf"))

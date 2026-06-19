@@ -33,8 +33,10 @@ const BASE_LOC_PER_SEC := 0.0
 const BASE_DEPLOY_RATE := 0.10
 const BASE_QA_POWER := 0.0
 const COPILOT_TRIAL_MULT := 2.0  # буст новачка до 1-го престижу ("trial Копілота")
+const CYCLE_KICKSTART_MULT := 2.0  # ×2 продакшн на старті циклу, поки money < cap
 
 const PRESTIGE_BASE_THRESHOLD := 10_000.0
+const CYCLE_KICKSTART_CAP := PRESTIGE_BASE_THRESHOLD
 const PRESTIGE_THRESHOLD_STEP := 3.0
 const STAT_SOFT_CAP := 1e100
 const MEASURE_MODE := true   # логер віх для збору кривої балансу (заїзд: true, реліз: false)
@@ -65,6 +67,7 @@ var bug_mult: float = 1.0
 var skill_productivity_mult: float = 1.0
 var skill_productivity_floor: float = 0.1
 var prestige_start_money: float = 0.0
+var cycle_kickstart_active: bool = false
 var auto_click_per_sec: float = 0.0
 var auto_qa_per_sec: float = 0.0
 var offline_progress_enabled: bool = false
@@ -357,6 +360,8 @@ func _apply_skill_stat_modifiers() -> void:
 		global_loc_mult *= PrestigeTree.root_loc_mult(root_level)
 	if prestige_count == 0:
 		global_loc_mult *= COPILOT_TRIAL_MULT
+	if cycle_kickstart_active:
+		global_loc_mult *= CYCLE_KICKSTART_MULT
 
 
 func copilot_trial_active() -> bool:
@@ -590,6 +595,7 @@ func save_game() -> void:
 		"upgrade_owned": upgrade_owned.duplicate(),
 		"skill_owned": skill_owned.duplicate(),
 		"root_level": root_level,
+		"cycle_kickstart_active": cycle_kickstart_active,
 		"last_tick_time": last_tick_time,
 		"total_play_time": total_play_time,
 		"click_unlocked": click_unlocked,
@@ -712,6 +718,7 @@ func load_game() -> bool:
 			skill_owned[skill_id] = bool(skills_raw[key])
 
 	root_level = int(data.get("root_level", 0))
+	cycle_kickstart_active = bool(data.get("cycle_kickstart_active", false))
 	if save_version < 10:
 		skill_owned.clear()
 		prestige_points = lifetime_prestige_points
@@ -847,6 +854,7 @@ func _apply_default_state() -> void:
 	upgrade_owned.clear()
 	skill_owned.clear()
 	root_level = 0
+	cycle_kickstart_active = false
 	seen_prestige_intro = false
 	_offline_summary = {}
 	_auto_click_timer = 0.0
@@ -1070,6 +1078,9 @@ func deploy() -> float:
 		friday_deploy = true
 	var earned := loc * deploy_rate * prestige_mult * sqrt(productivity_factor())
 	money += earned
+	if cycle_kickstart_active and money >= CYCLE_KICKSTART_CAP:
+		cycle_kickstart_active = false
+		recalculate_stats()
 	loc = 0.0
 	_clamp_stats()
 	total_deploys += 1
@@ -1099,7 +1110,6 @@ func preview_prestige_points() -> int:
 func prestige() -> int:
 	if not can_prestige():
 		return 0
-	var spent := prestige_threshold()
 	var new_points := preview_prestige_points()
 	prestige_points += new_points
 	lifetime_prestige_points += new_points
@@ -1113,8 +1123,9 @@ func prestige() -> int:
 	_flavor_bug_level_3 = false
 	_flavor_bug_level_4 = false
 	_flavor_bug_level_5 = false
+	money = prestige_start_money
+	cycle_kickstart_active = true
 	recalculate_stats()
-	money = maxf(0.0, money - spent) + prestige_start_money
 
 	stats_changed.emit()
 	if _milestone_logger != null:
