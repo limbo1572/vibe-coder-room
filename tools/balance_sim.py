@@ -127,7 +127,7 @@ class Sim:
                     if self.root>=rr and self.points>=c:
                         self.points-=c; self.owned_sk.add(sk); moved=True
             rc=root_cost(self.root,self.flat)
-            # качаємо корінь, якщо він відкриє щось або дає мульт і є очки
+            # корінь качається завжди, коли вистачає очок
             if self.points>=rc:
                 self.points-=rc; self.root+=1; moved=True
     def run_cycle(self, max_hours=24):
@@ -143,13 +143,14 @@ class Sim:
             self.bugs=max(0.0,self.bugs-(s["qa"]+s["auto_qa"])*dt)
             since_deploy+=dt
             if since_deploy>=DEPLOY_EVERY and self.loc>0:
-                self.money+=self.loc*s["rate"]*s["pm"]*math.sqrt(self.prod())
+                self.money+=self.loc*s["rate"]*math.sqrt(self.prod())
                 self.loc=0.0; since_deploy=0.0
                 if self.kickstart_active and self.money >= 10_000.0:
                     self.kickstart_active = False
             while self.try_buy(self.stats()): pass
             if self.money>=threshold:
-                self.points+=1; self.prestige_count+=1
+                pts=1+int(math.floor(math.log(self.money/threshold)/math.log(3.0)))
+                self.points+=pts; self.prestige_count+=1
                 self.results.append(t/60.0)
                 self.spend_points(); self.reset_run()
                 self.kickstart_active = True

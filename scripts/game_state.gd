@@ -1104,7 +1104,11 @@ func prestige_threshold() -> float:
 func preview_prestige_points() -> int:
 	if not can_prestige():
 		return 0
-	return 1
+	return 1 + int(floor(log(money / prestige_threshold()) / log(PRESTIGE_THRESHOLD_STEP)))
+
+
+func money_for_next_prestige_point() -> float:
+	return prestige_threshold() * pow(PRESTIGE_THRESHOLD_STEP, float(preview_prestige_points()))
 
 
 func prestige() -> int:
