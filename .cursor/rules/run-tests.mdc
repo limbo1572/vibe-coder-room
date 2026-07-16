@@ -1,0 +1,24 @@
+---
+description: Run the headless test suite after every code change; push only when green
+alwaysApply: true
+---
+
+# Tests — mandatory gate before push
+
+After ANY change to files in `scripts/` (or to `tests/` itself):
+
+1. Run the headless test suite from the project root:
+   `powershell -ExecutionPolicy Bypass -File tests/run_tests.ps1`
+2. All asserts must pass (`ALL TESTS GREEN`, exit code 0).
+3. If anything fails: fix the code (or, if the change intentionally alters
+   behavior, update the affected test and say so explicitly in the commit
+   message), then re-run until green.
+4. Only then commit and push (see git-push rule).
+
+When you ADD new game mechanics or fix a logic bug, also ADD a test for it
+in `tests/test_runner.gd` — a `check(...)` assert in the matching `_test_*`
+function, or a new `_test_*` function wired into `_run_all()`. Keep tests
+deterministic: no reliance on `randf()` outcomes, no real-time waits.
+
+The suite backs up and restores `user://` save files itself — it is safe
+to run on a dev machine. Never disable or skip it to "save time".
