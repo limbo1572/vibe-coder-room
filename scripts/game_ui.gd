@@ -57,6 +57,7 @@ var _bugs_label: Label
 var _prod_label: Label
 var _copilot_trial_label: Label
 var _rate_label: Label
+var _buff_label: Label
 var _deploy_button: Button
 var _prestige_button: Button
 var _prestige_tree_button: Button
@@ -109,6 +110,9 @@ var _captcha_panel: Control
 var _prestige_intro_overlay: Control
 var _flavor_queue: Array[Dictionary] = []
 var _flavor_showing: bool = false
+var _ui_root: Control
+var _hype_icon: Button
+var _hype_icon_tween: Tween
 
 
 func _ready() -> void:
@@ -120,6 +124,7 @@ func _ready() -> void:
 	Achievements.achievement_unlocked.connect(_on_achievement_unlocked)
 	FlavorLines.flavor_triggered.connect(_on_flavor_triggered)
 	GameState.captcha_triggered.connect(_on_captcha_triggered)
+	GameState.hype_spawned.connect(_on_hype_spawned)
 	_refresh_all()
 	call_deferred("_show_offline_popup_if_needed")
 
@@ -195,6 +200,7 @@ func _build_reset_dialog() -> void:
 
 func _build_ui() -> void:
 	var root := Control.new()
+	_ui_root = root
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
@@ -239,7 +245,13 @@ func _build_top_bar(root: Control) -> void:
 	)
 	_copilot_trial_label.add_theme_color_override("font_color", C_CYAN)
 	_rate_label = UITheme.make_stat_label("↗ +0 код/с", MONO_FONT)
-	for label: Label in [_loc_label, _money_label, _bugs_label, _prod_label, _copilot_trial_label, _rate_label]:
+	_buff_label = UITheme.make_stat_label("", MONO_FONT)
+	_buff_label.add_theme_color_override("font_color", C_MAGENTA)
+	_buff_label.visible = false
+	for label: Label in [
+		_loc_label, _money_label, _bugs_label, _prod_label,
+		_copilot_trial_label, _rate_label, _buff_label,
+	]:
 		column.add_child(label)
 
 	_prestige_button = Button.new()
@@ -1342,6 +1354,108 @@ func _on_captcha_y_pressed() -> void:
 		_captcha_overlay.visible = false
 
 
+func _on_hype_spawned() -> void:
+	_spawn_hype_icon()
+
+
+func _clear_hype_icon() -> void:
+	if _hype_icon_tween != null and _hype_icon_tween.is_valid():
+		_hype_icon_tween.kill()
+		_hype_icon_tween = null
+	if _hype_icon != null and is_instance_valid(_hype_icon):
+		_hype_icon.queue_free()
+	_hype_icon = null
+
+
+func _spawn_hype_icon() -> void:
+	if _ui_root == null:
+		return
+	_clear_hype_icon()
+
+	var btn := Button.new()
+	_hype_icon = btn
+	btn.text = "🔥"
+	btn.custom_minimum_size = Vector2(64, 64)
+	btn.add_theme_font_size_override("font_size", 40)
+	UITheme.style_button(btn, C_MAGENTA)
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.pressed.connect(_on_hype_icon_pressed)
+
+	var viewport_size := get_viewport().get_visible_rect().size
+	var margin := 100.0
+	var max_x := maxf(margin, viewport_size.x - margin - 64.0)
+	var max_y := maxf(margin, viewport_size.y - margin - 64.0)
+	btn.position = Vector2(
+		randf_range(margin, max_x),
+		randf_range(margin, max_y),
+	)
+	_ui_root.add_child(btn)
+
+	_hype_icon_tween = create_tween()
+	_hype_icon_tween.tween_interval(GameState.HYPE_ICON_LIFETIME - 0.3)
+	_hype_icon_tween.tween_property(btn, "modulate:a", 0.0, 0.3)
+	_hype_icon_tween.tween_callback(_clear_hype_icon)
+
+
+func _on_hype_icon_pressed() -> void:
+	var result: Dictionary = GameState.click_hype_event()
+	_clear_hype_icon()
+	var kind := str(result.get("type", ""))
+	match kind:
+		"hype":
+			_show_hype_banner("🔥 ХАЙП! ×7 коду на 77 секунд")
+		"flow":
+			_show_hype_banner("⚡ ФЛОУ. ×27 клік на 13 секунд")
+		"grant":
+			_show_hype_banner(
+				"💰 Грант: +$%s" % GameState.format_num(float(result.get("amount", 0.0)))
+			)
+
+
+func _show_hype_banner(text: String) -> void:
+	if _popup_layer == null or text.is_empty():
+		return
+
+	var slot := 0
+	for child in _popup_layer.get_children():
+		if child.has_meta("popup_banner"):
+			slot += 1
+
+	var banner := PanelContainer.new()
+	banner.set_meta("popup_banner", true)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(C_PANEL, 0.95)
+	style.set_corner_radius_all(8)
+	style.set_border_width_all(1)
+	style.border_color = Color(C_MAGENTA, 0.75)
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	banner.add_theme_stylebox_override("panel", style)
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
+	label.add_theme_color_override("font_color", C_MAGENTA)
+	banner.add_child(label)
+
+	banner.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	var y_off := -56.0 - float(slot) * 52.0
+	banner.offset_left = 16.0
+	banner.offset_top = y_off
+	banner.offset_right = 420.0
+	banner.offset_bottom = y_off + 40.0
+	_popup_layer.add_child(banner)
+
+	var tween := create_tween()
+	tween.tween_interval(5.0)
+	tween.tween_property(banner, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(banner.queue_free)
+
+
 func _show_flavor_banner(line: Dictionary) -> void:
 	if _popup_layer == null:
 		return
@@ -1776,6 +1890,23 @@ func _refresh_stats() -> void:
 	if GameState.prestige_mult > 1.0:
 		rate_text += "  · ×%.1f prestige" % GameState.prestige_mult
 	_rate_label.text = rate_text
+
+	if _buff_label != null:
+		if GameState.buff_type == "hype" and GameState.buff_time_left > 0.0:
+			_buff_label.visible = true
+			_buff_label.text = "🔥 ×%.0f LoC · залишилось %.0fс" % [
+				GameState.BUFF_HYPE_MULT,
+				ceilf(GameState.buff_time_left),
+			]
+		elif GameState.buff_type == "flow" and GameState.buff_time_left > 0.0:
+			_buff_label.visible = true
+			_buff_label.text = "⚡ ×%.0f клік · залишилось %.0fс" % [
+				GameState.BUFF_FLOW_MULT,
+				ceilf(GameState.buff_time_left),
+			]
+		else:
+			_buff_label.visible = false
+			_buff_label.text = ""
 
 	_deploy_button.disabled = GameState.loc <= 0.0
 

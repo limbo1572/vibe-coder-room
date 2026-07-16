@@ -172,6 +172,21 @@ const DEFS: Array[Dictionary] = [
 		"hint": "Запусти режим Великого Перепису.",
 		"hidden": false,
 	},
+	{
+		"id": "hype_first",
+		"name": "Хайпожер",
+		"desc": "Перший ретвіт. Карʼєра інфлюенсера почалась.",
+		"hint": "Спіймай перший вірусний твіт",
+		"hidden": false,
+	},
+	{
+		"id": "hype_10",
+		"name": "Серійний вірусолог",
+		"desc": "Алгоритм тебе любить. Поки що.",
+		"hint": "Спіймай 10 хайпів",
+		"hidden": false,
+		"reward_loc_mult": 0.03,
+	},
 ]
 
 var unlocked: Dictionary = {}
@@ -299,6 +314,10 @@ func _is_unlocked(id: String) -> bool:
 			return gs.near_prestige
 		"afk_return":
 			return gs.afk_return
+		"hype_first":
+			return gs.hype_events_clicked >= 1
+		"hype_10":
+			return gs.hype_events_clicked >= 10
 		"just_looking":
 			return false
 		_:

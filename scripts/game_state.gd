@@ -8,6 +8,8 @@ const ProgressMilestoneLogger = preload("res://scripts/progress_milestone_logger
 signal stats_changed
 signal passive_gain(loc_gain: float)
 signal captcha_triggered
+signal hype_spawned
+
 
 const SAVE_PATH := "user://save.json"
 const REFLOG_PATH := "user://save_reflog.json"
@@ -41,6 +43,16 @@ const PRESTIGE_THRESHOLD_STEP := 3.0
 const STAT_SOFT_CAP := 1e100
 const MEASURE_MODE := true   # логер віх для збору кривої балансу (заїзд: true, реліз: false)
 const DEBUG_CHEATS := false  # чити+дебаг-панелі для розробки (заїзд: false, реліз: false)
+
+const HYPE_SPAWN_MIN_SEC := 180.0
+const HYPE_SPAWN_MAX_SEC := 420.0
+const HYPE_ICON_LIFETIME := 13.0
+const BUFF_HYPE_MULT := 7.0
+const BUFF_HYPE_SEC := 77.0
+const BUFF_FLOW_MULT := 27.0
+const BUFF_FLOW_SEC := 13.0
+const GRANT_BANK_PCT := 0.15
+const GRANT_INCOME_SEC := 900.0
 
 var loc: float = 0.0
 var money: float = 0.0
@@ -96,6 +108,10 @@ var afk_return: bool = false
 var captcha_required: bool = false
 var captcha_count: int = 0
 
+var buff_type: String = ""
+var buff_time_left: float = 0.0
+var hype_events_clicked: int = 0
+
 var last_tick_time: float = 0.0
 var total_play_time: float = 0.0  # сумарний активний ігровий час, сек
 
@@ -103,6 +119,7 @@ var _autosave_timer: Timer
 var _offline_summary: Dictionary = {}
 var _auto_click_timer: float = 0.0
 var _ui_refresh_accum: float = 0.0
+var _hype_spawn_timer: float = 0.0
 var _spam_clicks_in_window: int = 0
 var _spam_window_elapsed: float = 0.0
 var _flavor_bug_level_1: bool = false
@@ -120,6 +137,7 @@ var _milestone_logger: ProgressMilestoneLogger
 func _ready() -> void:
 	_init_milestone_logger()
 	load_game()
+	_hype_spawn_timer = randf_range(HYPE_SPAWN_MIN_SEC, HYPE_SPAWN_MAX_SEC)
 	if MEASURE_MODE and _milestone_logger != null:
 		_milestone_logger.sync_from_save(self)
 	_autosave_timer = Timer.new()
@@ -144,11 +162,67 @@ func get_milestone_log() -> String:
 func _process(delta: float) -> void:
 	tick_passive_realtime()
 	_tick_achievement_timers(delta)
+	_tick_buffs(delta)
+	_tick_hype_spawn(delta)
 	_ui_refresh_accum += delta
 	if _ui_refresh_accum >= UI_REFRESH_INTERVAL:
 		_ui_refresh_accum = 0.0
 		stats_changed.emit()
 	_tick_auto_click(delta)
+
+
+func _tick_buffs(delta: float) -> void:
+	if buff_time_left <= 0.0:
+		return
+	buff_time_left -= delta
+	if buff_time_left <= 0.0:
+		buff_time_left = 0.0
+		buff_type = ""
+
+
+func _tick_hype_spawn(delta: float) -> void:
+	_hype_spawn_timer -= delta
+	if _hype_spawn_timer > 0.0:
+		return
+	if click_unlocked and not captcha_required:
+		hype_spawned.emit()
+		_hype_spawn_timer = randf_range(HYPE_SPAWN_MIN_SEC, HYPE_SPAWN_MAX_SEC)
+
+
+func buff_loc_mult() -> float:
+	if buff_type == "hype":
+		return BUFF_HYPE_MULT
+	return 1.0
+
+
+func buff_click_mult() -> float:
+	if buff_type == "flow":
+		return BUFF_FLOW_MULT
+	return 1.0
+
+
+func click_hype_event() -> Dictionary:
+	hype_events_clicked += 1
+	var result := {"type": "", "amount": 0.0}
+	var roll := randf()
+	if roll < 0.45:
+		buff_type = "hype"
+		buff_time_left = BUFF_HYPE_SEC
+		result["type"] = "hype"
+	elif roll < 0.90:
+		var prod := productivity_factor()
+		var income_sec := loc_per_sec * prod * deploy_rate * sqrt(prod)
+		var amount := minf(GRANT_BANK_PCT * money, GRANT_INCOME_SEC * income_sec) + 50.0
+		money += amount
+		_clamp_stats()
+		result["type"] = "grant"
+		result["amount"] = amount
+	else:
+		buff_type = "flow"
+		buff_time_left = BUFF_FLOW_SEC
+		result["type"] = "flow"
+	stats_changed.emit()
+	return result
 
 
 func _tick_achievement_timers(delta: float) -> void:
@@ -640,6 +714,7 @@ func save_game() -> void:
 		"near_prestige": near_prestige,
 		"afk_return": afk_return,
 		"captcha_count": captcha_count,
+		"hype_events_clicked": hype_events_clicked,
 		"milestone_log": (
 			_milestone_logger.serialize() if (_milestone_logger != null and MEASURE_MODE) else {}
 		),
@@ -724,7 +799,10 @@ func load_game() -> bool:
 	near_prestige = bool(data.get("near_prestige", false))
 	afk_return = bool(data.get("afk_return", false))
 	captcha_count = int(data.get("captcha_count", 0))
+	hype_events_clicked = int(data.get("hype_events_clicked", 0))
 	captcha_required = false
+	buff_type = ""
+	buff_time_left = 0.0
 
 	upgrade_owned.clear()
 	var owned_raw: Variant = data.get("upgrade_owned", {})
@@ -869,6 +947,10 @@ func _apply_default_state() -> void:
 	afk_return = false
 	captcha_required = false
 	captcha_count = 0
+	hype_events_clicked = 0
+	buff_type = ""
+	buff_time_left = 0.0
+	_hype_spawn_timer = randf_range(HYPE_SPAWN_MIN_SEC, HYPE_SPAWN_MAX_SEC)
 	_captcha_rate_accum = 0.0
 	_captcha_clicks_this_sec = 0
 	_captcha_sec_elapsed = 0.0
@@ -1024,6 +1106,8 @@ func _apply_passive_for_elapsed(elapsed: float, is_offline: bool = false) -> Dic
 	if loc_per_sec > 0.0:
 		var prod := productivity_factor()
 		var loc_gain := loc_per_sec * prestige_mult * prod * elapsed
+		if not is_offline:
+			loc_gain *= buff_loc_mult()
 		if loc_gain > 0.0:
 			loc += loc_gain
 			passive_loc_earned += loc_gain
@@ -1068,7 +1152,7 @@ func click_code(is_manual: bool = true) -> float:
 		return 0.0
 	if not click_unlocked:
 		return 0.0
-	var gain := loc_per_click * prestige_mult * productivity_factor()
+	var gain := loc_per_click * prestige_mult * productivity_factor() * buff_loc_mult() * buff_click_mult()
 	loc += gain
 	bugs += gain * BUG_RATE_CLICK * bug_mult
 	_clamp_stats()
