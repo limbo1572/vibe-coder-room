@@ -136,6 +136,15 @@ func on_prestige(state: Node) -> void:
 	_log_lines.append(_cycle_marker_line(state))
 
 
+func on_meta_prestige(state: Node) -> void:
+	if not _enabled:
+		return
+	_hit.clear()
+	_log_lines.append(
+		"--- meta-prestige #%d, full reset ---" % int(state.get("meta_level"))
+	)
+
+
 func _mark_offline_hit(key: String, label: String, state: Node) -> void:
 	if _hit.get(key, false):
 		return

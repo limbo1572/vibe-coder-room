@@ -45,6 +45,7 @@ const PRESTIGE_BRANCH_ORDER := ["click", "passive", "bugs", "economy"]
 
 const DEBUG_SKILL_BUTTONS := [
 	{"id": "", "label": "+10 refactor pts", "action": "grant_10"},
+	{"id": "", "label": "prestige_count = 10", "action": "set_prestige_10"},
 	{"id": "sk_fast_fingers", "label": "fast_fingers", "action": "buy"},
 	{"id": "sk_autocomplete", "label": "autocomplete", "action": "buy"},
 	{"id": "sk_linter", "label": "linter", "action": "buy"},
@@ -1730,6 +1731,8 @@ func _on_debug_skill_pressed(entry: Dictionary) -> void:
 	match entry["action"]:
 		"grant_10":
 			GameState.grant_prestige_points(10)
+		"set_prestige_10":
+			GameState.debug_set_prestige_count(10)
 		"buy":
 			GameState.debug_buy_skill(entry["id"])
 	_refresh_debug_skill_panel()
@@ -2339,6 +2342,9 @@ func _on_meta_prestige_confirmed() -> void:
 	if _prestige_tree_overlay != null and _prestige_tree_overlay.visible:
 		_close_prestige_tree()
 	GameState.meta_prestige()
+	if _onboarding_input != null:
+		_onboarding_input.text = ""
+		_onboarding_hint.visible = false
 
 
 func _on_meta_prestige_cancelled() -> void:

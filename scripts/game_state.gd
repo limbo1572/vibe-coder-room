@@ -546,6 +546,14 @@ func grant_prestige_points(amount: int) -> void:
 	print("Granted %d prestige points (total: %d)" % [amount, prestige_points])
 
 
+func debug_set_prestige_count(value: int) -> void:
+	if not DEBUG_CHEATS:
+		return
+	used_cheats = true
+	prestige_count = value
+	stats_changed.emit()
+
+
 func productivity_factor() -> float:
 	var k := 100.0 + 2.0 * codebase_lps
 	var raw := clampf(1.0 - (bugs / (bugs + k)), 0.1, 1.0)
@@ -1265,6 +1273,8 @@ func meta_prestige() -> void:
 
 	recalculate_stats()
 	stats_changed.emit()
+	if _milestone_logger != null:
+		_milestone_logger.on_meta_prestige(self)
 	save_game()
 
 
