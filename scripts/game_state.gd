@@ -10,6 +10,7 @@ signal passive_gain(loc_gain: float)
 signal captcha_triggered
 signal hype_spawned
 signal deploy_incident
+signal legacy_event_spawned
 
 
 const SAVE_PATH := "user://save.json"
@@ -50,6 +51,12 @@ const INCIDENT_MONEY_PENALTY := 0.5
 const INCIDENT_BUG_PCT := 0.10
 const FRIDAY_DEPLOY_BONUS := 1.25
 const FRIDAY_INCIDENT_CHANCE := 0.10
+const LEGACY_LOC_MULT := 1.5
+const LEGACY_EVENT_MIN_SEC := 90.0
+const LEGACY_EVENT_MAX_SEC := 240.0
+const LEGACY_BUFF_MULT := 3.0
+const LEGACY_BUFF_SEC := 30.0
+const LEGACY_DEBT_BUG_PCT := 0.08
 const STAT_SOFT_CAP := 1e100
 const MEASURE_MODE := true   # логер віх для збору кривої балансу (заїзд: true, реліз: false)
 const DEBUG_CHEATS := false  # чити+дебаг-панелі для розробки (заїзд: false, реліз: false)
@@ -124,6 +131,8 @@ var buff_type: String = ""
 var buff_time_left: float = 0.0
 var hype_events_clicked: int = 0
 var incidents_survived: int = 0
+var legacy_events_clicked: int = 0
+var ever_entered_legacy: bool = false
 
 var last_tick_time: float = 0.0
 var total_play_time: float = 0.0  # сумарний активний ігровий час, сек
@@ -133,6 +142,7 @@ var _offline_summary: Dictionary = {}
 var _auto_click_timer: float = 0.0
 var _ui_refresh_accum: float = 0.0
 var _hype_spawn_timer: float = 0.0
+var _legacy_spawn_timer: float = 0.0
 var _spam_clicks_in_window: int = 0
 var _spam_window_elapsed: float = 0.0
 var _flavor_bug_level_1: bool = false
@@ -151,6 +161,7 @@ func _ready() -> void:
 	_init_milestone_logger()
 	load_game()
 	_hype_spawn_timer = randf_range(HYPE_SPAWN_MIN_SEC, HYPE_SPAWN_MAX_SEC)
+	_legacy_spawn_timer = randf_range(LEGACY_EVENT_MIN_SEC, LEGACY_EVENT_MAX_SEC)
 	if MEASURE_MODE and _milestone_logger != null:
 		_milestone_logger.sync_from_save(self)
 	_autosave_timer = Timer.new()
@@ -177,6 +188,7 @@ func _process(delta: float) -> void:
 	_tick_achievement_timers(delta)
 	_tick_buffs(delta)
 	_tick_hype_spawn(delta)
+	_tick_legacy_spawn(delta)
 	_ui_refresh_accum += delta
 	if _ui_refresh_accum >= UI_REFRESH_INTERVAL:
 		_ui_refresh_accum = 0.0
@@ -205,6 +217,8 @@ func _tick_hype_spawn(delta: float) -> void:
 func buff_loc_mult() -> float:
 	if buff_type == "hype":
 		return BUFF_HYPE_MULT
+	if buff_type == "legacy":
+		return LEGACY_BUFF_MULT
 	return 1.0
 
 
@@ -212,6 +226,38 @@ func buff_click_mult() -> float:
 	if buff_type == "flow":
 		return BUFF_FLOW_MULT
 	return 1.0
+
+
+func legacy_active() -> bool:
+	return get_upgrade_owned("legacy_mode") > 0 and get_upgrade_owned("code_freeze") <= 0
+
+
+func _tick_legacy_spawn(delta: float) -> void:
+	if not legacy_active():
+		return
+	_legacy_spawn_timer -= delta
+	if _legacy_spawn_timer > 0.0:
+		return
+	legacy_event_spawned.emit()
+	_legacy_spawn_timer = randf_range(LEGACY_EVENT_MIN_SEC, LEGACY_EVENT_MAX_SEC)
+
+
+func click_legacy_event(rng_roll: float = -1.0) -> Dictionary:
+	legacy_events_clicked += 1
+	var result := {"type": ""}
+	var roll := randf() if rng_roll < 0.0 else rng_roll
+	if roll < 0.5:
+		buff_type = "legacy"
+		buff_time_left = LEGACY_BUFF_SEC
+		result["type"] = "buff"
+	else:
+		var debt := (100.0 + codebase_lps) * LEGACY_DEBT_BUG_PCT * 10.0
+		bugs += debt
+		_clamp_stats()
+		result["type"] = "debt"
+		result["amount"] = debt
+	stats_changed.emit()
+	return result
 
 
 func click_hype_event() -> Dictionary:
@@ -470,6 +516,8 @@ func _apply_skill_stat_modifiers() -> void:
 		global_loc_mult *= CYCLE_KICKSTART_MULT
 	if meta_level > 0:
 		global_loc_mult *= pow(META_LOC_MULT, meta_level)
+	if legacy_active():
+		global_loc_mult *= LEGACY_LOC_MULT
 
 
 func copilot_trial_active() -> bool:
@@ -657,6 +705,11 @@ func buy_upgrade(upgrade_id: String, count: int = 1) -> bool:
 	upgrade_owned[upgrade_id] = owned + count
 	if def["effect_type"] == UpgradeCatalog.EffectType.UNLOCK_CLICK:
 		click_unlocked = true
+	elif def["effect_type"] == UpgradeCatalog.EffectType.LEGACY_MODE:
+		ever_entered_legacy = true
+	elif def["effect_type"] == UpgradeCatalog.EffectType.CODE_FREEZE:
+		upgrade_owned.erase("legacy_mode")
+		upgrade_owned.erase("code_freeze")
 	recalculate_stats()
 	_clamp_stats()
 	stats_changed.emit()
@@ -744,6 +797,8 @@ func save_game() -> void:
 		"captcha_count": captcha_count,
 		"hype_events_clicked": hype_events_clicked,
 		"incidents_survived": incidents_survived,
+		"legacy_events_clicked": legacy_events_clicked,
+		"ever_entered_legacy": ever_entered_legacy,
 		"milestone_log": (
 			_milestone_logger.serialize() if (_milestone_logger != null and MEASURE_MODE) else {}
 		),
@@ -828,6 +883,8 @@ func load_game() -> bool:
 	captcha_count = int(data.get("captcha_count", 0))
 	hype_events_clicked = int(data.get("hype_events_clicked", 0))
 	incidents_survived = int(data.get("incidents_survived", 0))
+	legacy_events_clicked = int(data.get("legacy_events_clicked", 0))
+	ever_entered_legacy = bool(data.get("ever_entered_legacy", false))
 	captcha_required = false
 	buff_type = ""
 	buff_time_left = 0.0
@@ -979,9 +1036,12 @@ func _apply_default_state() -> void:
 	captcha_count = 0
 	hype_events_clicked = 0
 	incidents_survived = 0
+	legacy_events_clicked = 0
+	ever_entered_legacy = false
 	buff_type = ""
 	buff_time_left = 0.0
 	_hype_spawn_timer = randf_range(HYPE_SPAWN_MIN_SEC, HYPE_SPAWN_MAX_SEC)
+	_legacy_spawn_timer = randf_range(LEGACY_EVENT_MIN_SEC, LEGACY_EVENT_MAX_SEC)
 	_captcha_rate_accum = 0.0
 	_captcha_clicks_this_sec = 0
 	_captcha_sec_elapsed = 0.0

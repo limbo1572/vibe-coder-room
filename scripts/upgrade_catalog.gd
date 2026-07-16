@@ -9,6 +9,8 @@ enum EffectType {
 	DEPLOY_RATE,
 	UNLOCK_CLICK,
 	GENERATOR_MULT,
+	LEGACY_MODE,
+	CODE_FREEZE,
 }
 
 const DEFAULT_MAX_OWNED := 999_999
@@ -298,6 +300,30 @@ static func all() -> Array[Dictionary]:
 			"meme": "Чужий компʼютер за твої гроші",
 			"category": "deploy",
 		},
+		# Risk / legacy
+		{
+			"id": "legacy_mode",
+			"name": "Деплой без ревʼю",
+			"base_cost": 50000.0,
+			"effect_type": EffectType.LEGACY_MODE,
+			"effect_value": 0.0,
+			"effect_label": "+50% LoC, але...",
+			"meme": "LGTM. Мерджимо.",
+			"category": "risk",
+			"max_owned": 1,
+			"min_prestige": 3,
+		},
+		{
+			"id": "code_freeze",
+			"name": "Кодфріз",
+			"base_cost": 250000.0,
+			"effect_type": EffectType.CODE_FREEZE,
+			"effect_value": 0.0,
+			"effect_label": "вимкнути Легасі-код",
+			"meme": "Ніяких деплоїв до понеділка",
+			"category": "risk",
+			"max_owned": 1,
+		},
 		]
 	return _cache
 
@@ -336,4 +362,8 @@ static func format_total_effect(def: Dictionary, owned: int, format_num: Callabl
 			return ""
 		EffectType.GENERATOR_MULT:
 			return "×%s до генератора" % format_num.call(pow(value, owned))
+		EffectType.LEGACY_MODE:
+			return "легасі-режим активний"
+		EffectType.CODE_FREEZE:
+			return ""
 	return ""

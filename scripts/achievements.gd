@@ -215,6 +215,21 @@ const DEFS: Array[Dictionary] = [
 		"hint": "Переживи 10 інцидентів на проді",
 		"hidden": false,
 	},
+	{
+		"id": "legacy_enter",
+		"name": "LGTM",
+		"desc": "Ревʼю — для боягузів.",
+		"hint": "Увімкни режим Легасі-код",
+		"hidden": false,
+	},
+	{
+		"id": "legacy_10",
+		"name": "Некромант",
+		"desc": "Мертвий код слухається тебе.",
+		"hint": "Спіймай 10 подій легасі-коду",
+		"hidden": false,
+		"reward_loc_mult": 0.03,
+	},
 ]
 
 var unlocked: Dictionary = {}
@@ -354,6 +369,10 @@ func _is_unlocked(id: String) -> bool:
 			return gs.meta_level >= GameState.META_FINAL_LEVEL
 		"incident_10":
 			return gs.incidents_survived >= 10
+		"legacy_enter":
+			return gs.ever_entered_legacy or gs.get_upgrade_owned("legacy_mode") > 0
+		"legacy_10":
+			return gs.legacy_events_clicked >= 10
 		"just_looking":
 			return false
 		_:

@@ -119,6 +119,8 @@ var _flavor_showing: bool = false
 var _ui_root: Control
 var _hype_icon: Button
 var _hype_icon_tween: Tween
+var _legacy_icon: Button
+var _legacy_icon_tween: Tween
 
 
 func _ready() -> void:
@@ -132,6 +134,7 @@ func _ready() -> void:
 	GameState.captcha_triggered.connect(_on_captcha_triggered)
 	GameState.hype_spawned.connect(_on_hype_spawned)
 	GameState.deploy_incident.connect(_on_deploy_incident)
+	GameState.legacy_event_spawned.connect(_on_legacy_event_spawned)
 	_refresh_all()
 	call_deferred("_show_offline_popup_if_needed")
 
@@ -476,6 +479,8 @@ func _category_title(category: String) -> String:
 			return "Deploy"
 		"tiers":
 			return "Тіри генераторів"
+		"risk":
+			return "Ризик"
 		_:
 			return category
 
@@ -1430,6 +1435,64 @@ func _on_hype_icon_pressed() -> void:
 			)
 
 
+func _on_legacy_event_spawned() -> void:
+	_spawn_legacy_icon()
+
+
+func _clear_legacy_icon() -> void:
+	if _legacy_icon_tween != null and _legacy_icon_tween.is_valid():
+		_legacy_icon_tween.kill()
+		_legacy_icon_tween = null
+	if _legacy_icon != null and is_instance_valid(_legacy_icon):
+		_legacy_icon.queue_free()
+	_legacy_icon = null
+
+
+func _spawn_legacy_icon() -> void:
+	if _ui_root == null:
+		return
+	_clear_legacy_icon()
+
+	var btn := Button.new()
+	_legacy_icon = btn
+	btn.text = "💀"
+	btn.custom_minimum_size = Vector2(64, 64)
+	btn.add_theme_font_size_override("font_size", 40)
+	UITheme.style_button(btn, C_RED)
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.pressed.connect(_on_legacy_icon_pressed)
+
+	var viewport_size := get_viewport().get_visible_rect().size
+	var margin := 100.0
+	var max_x := maxf(margin, viewport_size.x - margin - 64.0)
+	var max_y := maxf(margin, viewport_size.y - margin - 64.0)
+	btn.position = Vector2(
+		randf_range(margin, max_x),
+		randf_range(margin, max_y),
+	)
+	_ui_root.add_child(btn)
+
+	_legacy_icon_tween = create_tween()
+	_legacy_icon_tween.tween_interval(GameState.HYPE_ICON_LIFETIME - 0.3)
+	_legacy_icon_tween.tween_property(btn, "modulate:a", 0.0, 0.3)
+	_legacy_icon_tween.tween_callback(_clear_legacy_icon)
+
+
+func _on_legacy_icon_pressed() -> void:
+	var result: Dictionary = GameState.click_legacy_event()
+	_clear_legacy_icon()
+	var kind := str(result.get("type", ""))
+	match kind:
+		"buff":
+			_show_hype_banner("💀 Легасі спрацювало: ×3 коду на 30с")
+		"debt":
+			_show_hype_banner(
+				"💀 Технічний борг ожив: +%s багів" % GameState.format_num(
+					float(result.get("amount", 0.0))
+				)
+			)
+
+
 func _show_hype_banner(text: String) -> void:
 	if _popup_layer == null or text.is_empty():
 		return
@@ -1818,6 +1881,13 @@ func _refresh_upgrade_visibility() -> void:
 					var target_id := str(def.get("target_id", ""))
 					var need := int(def.get("unlock_at_owned", 0))
 					show = show and GameState.get_upgrade_owned(target_id) >= need
+			elif def.get("effect_type") == UpgradeCatalog.EffectType.CODE_FREEZE:
+				show = show and GameState.legacy_active()
+			elif int(def.get("min_prestige", 0)) > 0:
+				var owned_now := GameState.get_upgrade_owned(def["id"])
+				show = show and (
+					owned_now > 0 or GameState.prestige_count >= int(def["min_prestige"])
+				)
 		row.visible = show
 		if show:
 			visible_categories[category] = true
@@ -1922,6 +1992,12 @@ func _refresh_stats() -> void:
 			_buff_label.visible = true
 			_buff_label.text = "⚡ ×%.0f клік · залишилось %.0fс" % [
 				GameState.BUFF_FLOW_MULT,
+				ceilf(GameState.buff_time_left),
+			]
+		elif GameState.buff_type == "legacy" and GameState.buff_time_left > 0.0:
+			_buff_label.visible = true
+			_buff_label.text = "💀 ×%.0f LoC · залишилось %.0fс" % [
+				GameState.LEGACY_BUFF_MULT,
 				ceilf(GameState.buff_time_left),
 			]
 		else:

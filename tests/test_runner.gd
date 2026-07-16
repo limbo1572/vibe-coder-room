@@ -61,6 +61,7 @@ func _run_all() -> void:
 	_test_buffs_and_hype()
 	_test_perfectionist_gate()
 	_test_deploy_risk()
+	_test_legacy_mode()
 	_test_save_load_roundtrip()
 
 
@@ -259,6 +260,37 @@ func _test_deploy_risk() -> void:
 	check(GameState.bugs > bugs_before, "deploy risk: incident adds bugs")
 	check(GameState.incidents_survived == 1, "deploy risk: survived counter +1")
 	check(Achievements._is_unlocked("incident_10") == false, "deploy risk: ach not yet at 1")
+
+
+func _test_legacy_mode() -> void:
+	_fresh()
+	GameState.prestige_count = 3
+	GameState.money = 1_000_000.0
+	GameState.recalculate_stats()
+	var mult_before := GameState.global_loc_mult
+	check(GameState.buy_upgrade("legacy_mode", 1), "legacy: bought mode")
+	check(GameState.legacy_active(), "legacy: active after buy")
+	check(GameState.ever_entered_legacy, "legacy: ever flag set")
+	check(Achievements._is_unlocked("legacy_enter"), "ach: legacy_enter")
+	GameState.recalculate_stats()
+	check(approx(GameState.global_loc_mult, mult_before * GameState.LEGACY_LOC_MULT), "legacy: loc mult x1.5")
+
+	GameState.click_legacy_event(0.0)
+	check(GameState.buff_type == "legacy", "legacy: buff type")
+	check(approx(GameState.buff_loc_mult(), GameState.LEGACY_BUFF_MULT), "legacy: buff x3")
+
+	GameState.buff_type = ""
+	GameState.buff_time_left = 0.0
+	var bugs_before := GameState.bugs
+	GameState.click_legacy_event(0.9)
+	check(GameState.bugs > bugs_before, "legacy: debt adds bugs")
+
+	GameState.money = 1_000_000.0
+	check(GameState.buy_upgrade("code_freeze", 1), "legacy: bought freeze")
+	check(not GameState.legacy_active(), "legacy: inactive after freeze")
+	check(GameState.get_upgrade_owned("legacy_mode") == 0, "legacy: mode cleared")
+	check(GameState.get_upgrade_owned("code_freeze") == 0, "legacy: freeze cleared")
+	check(GameState.ever_entered_legacy, "legacy: ever flag survives freeze")
 
 
 func _test_save_load_roundtrip() -> void:
