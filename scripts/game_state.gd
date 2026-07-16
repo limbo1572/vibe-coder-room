@@ -16,7 +16,7 @@ const REFLOG_PATH := "user://save_reflog.json"
 const STASH_PATH := "user://save_stash.json"
 const ACHIEVEMENTS_PATH := "user://achievements.json"
 const ACH_STASH_PATH := "user://achievements_stash.json"
-const CURRENT_SAVE_VERSION := 10
+const CURRENT_SAVE_VERSION := 11
 const ACTIVE_TICK_MAX := 2.0  # elapsed > this = offline gap, skip play-time accrual
 const UI_REFRESH_INTERVAL := 0.1  # оновлювати UI 10 раз/сек, не 60
 const AUTOSAVE_SEC := 10.0
@@ -40,6 +40,9 @@ const CYCLE_KICKSTART_MULT := 2.0  # ×2 продакшн на старті ци
 const PRESTIGE_BASE_THRESHOLD := 10_000.0
 const CYCLE_KICKSTART_CAP := PRESTIGE_BASE_THRESHOLD
 const PRESTIGE_THRESHOLD_STEP := 3.0
+const META_PRESTIGE_GATE := 10
+const META_LOC_MULT := 3.0
+const META_FINAL_LEVEL := 3
 const STAT_SOFT_CAP := 1e100
 const MEASURE_MODE := true   # логер віх для збору кривої балансу (заїзд: true, реліз: false)
 const DEBUG_CHEATS := false  # чити+дебаг-панелі для розробки (заїзд: false, реліз: false)
@@ -66,6 +69,8 @@ var prestige_mult: float = 1.0
 var prestige_points: int = 0
 var lifetime_prestige_points: int = 0   # сумарно зароблених очок престижу (ачівки, статистика)
 var prestige_count: int = 0
+var meta_level: int = 0
+var lifetime_meta_resets: int = 0
 
 var upgrade_owned: Dictionary = {}
 var skill_owned: Dictionary = {}
@@ -455,6 +460,8 @@ func _apply_skill_stat_modifiers() -> void:
 		global_loc_mult *= COPILOT_TRIAL_MULT
 	if cycle_kickstart_active:
 		global_loc_mult *= CYCLE_KICKSTART_MULT
+	if meta_level > 0:
+		global_loc_mult *= pow(META_LOC_MULT, meta_level)
 
 
 func copilot_trial_active() -> bool:
@@ -693,6 +700,8 @@ func save_game() -> void:
 		"lifetime_prestige_points": lifetime_prestige_points,
 		"prestige_count": prestige_count,
 		"prestige_mult": prestige_mult,
+		"meta_level": meta_level,
+		"lifetime_meta_resets": lifetime_meta_resets,
 		"upgrade_owned": upgrade_owned.duplicate(),
 		"skill_owned": skill_owned.duplicate(),
 		"root_level": root_level,
@@ -765,6 +774,8 @@ func load_game() -> bool:
 	prestige_points = int(data.get("prestige_points", 0))
 	prestige_count = int(data.get("prestige_count", 0))
 	prestige_mult = float(data.get("prestige_mult", 1.0))
+	meta_level = int(data.get("meta_level", 0))
+	lifetime_meta_resets = int(data.get("lifetime_meta_resets", 0))
 	var saved_lifetime := int(data.get("lifetime_prestige_points", -1))
 	if saved_lifetime < 0:
 		# старий сейв: відновити lifetime з множника (mult = 1 + lifetime*0.1)
@@ -928,6 +939,8 @@ func _apply_default_state() -> void:
 	lifetime_prestige_points = 0
 	prestige_count = 0
 	prestige_mult = 1.0
+	meta_level = 0
+	lifetime_meta_resets = 0
 	click_unlocked = false
 	hello_world_done = false
 	hello_world_with_bug = false
@@ -1216,6 +1229,43 @@ func preview_prestige_points() -> int:
 
 func money_for_next_prestige_point() -> float:
 	return prestige_threshold() * pow(PRESTIGE_THRESHOLD_STEP, float(preview_prestige_points()))
+
+
+func can_meta_prestige() -> bool:
+	return prestige_count >= META_PRESTIGE_GATE
+
+
+func meta_prestige() -> void:
+	if not can_meta_prestige():
+		return
+	meta_level += 1
+	lifetime_meta_resets += 1
+
+	loc = 0.0
+	money = 0.0
+	bugs = 0.0
+	upgrade_owned.clear()
+	skill_owned.clear()
+	root_level = 0
+	prestige_points = 0
+	prestige_count = 0
+	cycle_kickstart_active = false
+	click_unlocked = false
+	hello_world_done = false
+	hello_world_with_bug = false
+	hello_world_hint_seen = false
+	seen_prestige_intro = false
+	buff_type = ""
+	buff_time_left = 0.0
+	_flavor_bug_level_1 = false
+	_flavor_bug_level_2 = false
+	_flavor_bug_level_3 = false
+	_flavor_bug_level_4 = false
+	_flavor_bug_level_5 = false
+
+	recalculate_stats()
+	stats_changed.emit()
+	save_game()
 
 
 func prestige() -> int:

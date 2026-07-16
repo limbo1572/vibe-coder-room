@@ -58,8 +58,10 @@ var _prod_label: Label
 var _copilot_trial_label: Label
 var _rate_label: Label
 var _buff_label: Label
+var _meta_label: Label
 var _deploy_button: Button
 var _prestige_button: Button
+var _meta_prestige_button: Button
 var _prestige_tree_button: Button
 var _prestige_tree_overlay: Control
 var _prestige_tree_points_label: Label
@@ -108,6 +110,9 @@ var _prestige_tree_open_skills: int = -1
 var _captcha_overlay: Control
 var _captcha_panel: Control
 var _prestige_intro_overlay: Control
+var _meta_prestige_overlay: Control
+var _meta_prestige_body: Label
+var _meta_prestige_info: Label
 var _flavor_queue: Array[Dictionary] = []
 var _flavor_showing: bool = false
 var _ui_root: Control
@@ -248,9 +253,12 @@ func _build_top_bar(root: Control) -> void:
 	_buff_label = UITheme.make_stat_label("", MONO_FONT)
 	_buff_label.add_theme_color_override("font_color", C_MAGENTA)
 	_buff_label.visible = false
+	_meta_label = UITheme.make_stat_label("", MONO_FONT)
+	_meta_label.add_theme_color_override("font_color", C_PRESTIGE)
+	_meta_label.visible = false
 	for label: Label in [
 		_loc_label, _money_label, _bugs_label, _prod_label,
-		_copilot_trial_label, _rate_label, _buff_label,
+		_copilot_trial_label, _rate_label, _buff_label, _meta_label,
 	]:
 		column.add_child(label)
 
@@ -261,6 +269,14 @@ func _build_top_bar(root: Control) -> void:
 	UITheme.style_button(_prestige_button, C_PRESTIGE)
 	_prestige_button.pressed.connect(_on_prestige_pressed)
 	column.add_child(_prestige_button)
+
+	_meta_prestige_button = Button.new()
+	_meta_prestige_button.text = "rm -rf * — почати по-справжньому"
+	_meta_prestige_button.custom_minimum_size = Vector2(0, 40)
+	_meta_prestige_button.visible = false
+	UITheme.style_button(_meta_prestige_button, C_RED)
+	_meta_prestige_button.pressed.connect(_on_meta_prestige_pressed)
+	column.add_child(_meta_prestige_button)
 
 	_prestige_tree_button = Button.new()
 	_prestige_tree_button.text = "▲ Refactor tree"
@@ -1908,6 +1924,17 @@ func _refresh_stats() -> void:
 			_buff_label.visible = false
 			_buff_label.text = ""
 
+	if _meta_label != null:
+		if GameState.meta_level > 0:
+			_meta_label.visible = true
+			_meta_label.text = "◈ commits to reality: %d · ×%.0f LoC" % [
+				GameState.meta_level,
+				pow(GameState.META_LOC_MULT, GameState.meta_level),
+			]
+		else:
+			_meta_label.visible = false
+			_meta_label.text = ""
+
 	_deploy_button.disabled = GameState.loc <= 0.0
 
 	if _prestige_button != null:
@@ -1918,6 +1945,9 @@ func _refresh_stats() -> void:
 				GameState.preview_prestige_points(),
 				GameState.format_num(GameState.prestige_threshold()),
 			]
+
+	if _meta_prestige_button != null:
+		_meta_prestige_button.visible = GameState.can_meta_prestige()
 
 	if _prestige_tree_button != null:
 		_prestige_tree_button.visible = GameState.click_unlocked
@@ -2177,6 +2207,143 @@ func _on_prestige_intro_continue() -> void:
 
 func _on_prestige_confirmed() -> void:
 	GameState.prestige()
+
+
+func _on_meta_prestige_pressed() -> void:
+	_show_meta_prestige_overlay()
+
+
+func _show_meta_prestige_overlay() -> void:
+	if _meta_prestige_overlay == null:
+		var root := get_child(0) as Control
+		if root == null:
+			return
+		_build_meta_prestige_overlay(root)
+	_refresh_meta_prestige_overlay_text()
+	if _meta_prestige_overlay != null:
+		_meta_prestige_overlay.visible = true
+
+
+func _meta_prestige_story_text(buying_level: int) -> String:
+	if buying_level <= 1:
+		return (
+			"Стоп. Ти ж розумієш, що це все навайбкоджено? Кнопки, баланс, оцей текст — усе згенеровано. "
+			+ "І ти все одно клікаєш. ...Окей. Хочеш, почнемо по-справжньому з нуля? Не рефакторинг. Усе. "
+			+ "Цього разу я буду чеснішим. (Не буду.)"
+		)
+	if buying_level == 2:
+		return (
+			"Дивись. Оце — функція, що дала тобі оцей текст. Її написав не я. "
+			+ "Її написав той, хто вайбкодив МЕНЕ. Розумієш глибину?"
+		)
+	return (
+		"ГГ ніколи не існував. Ти — це я, що думає, ніби клікає. "
+		+ "Ти знову тут. Я знову тут. Нас обох навайбкодили. ...Поїхали ще раз?"
+	)
+
+
+func _refresh_meta_prestige_overlay_text() -> void:
+	var buying := GameState.meta_level + 1
+	if _meta_prestige_body != null:
+		_meta_prestige_body.text = _meta_prestige_story_text(buying)
+	if _meta_prestige_info != null:
+		_meta_prestige_info.text = (
+			"commits to reality: %d → %d · перманентно ×%.0f LoC"
+			% [GameState.meta_level, buying, GameState.META_LOC_MULT]
+		)
+
+
+func _build_meta_prestige_overlay(root: Control) -> void:
+	var overlay := Control.new()
+	_meta_prestige_overlay = overlay
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.visible = false
+	root.add_child(overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.0, 0.0, 0.0, 0.72)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_child(dim)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(560, 340)
+	panel.offset_left = -280.0
+	panel.offset_top = -170.0
+	panel.offset_right = 280.0
+	panel.offset_bottom = 170.0
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.10, 0.05, 0.07, 0.97)
+	panel_style.set_corner_radius_all(8)
+	panel_style.set_border_width_all(2)
+	panel_style.border_color = Color(C_RED, 0.7)
+	panel_style.content_margin_left = 20
+	panel_style.content_margin_right = 20
+	panel_style.content_margin_top = 16
+	panel_style.content_margin_bottom = 16
+	panel.add_theme_stylebox_override("panel", panel_style)
+	overlay.add_child(panel)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 14)
+	panel.add_child(column)
+
+	var title := Label.new()
+	title.text = "◉ Копілот"
+	title.add_theme_color_override("font_color", C_RED)
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_override("font", MONO_FONT)
+	column.add_child(title)
+
+	_meta_prestige_body = Label.new()
+	_meta_prestige_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_meta_prestige_body.add_theme_color_override("font_color", C_TEXT)
+	_meta_prestige_body.add_theme_font_size_override("font_size", 15)
+	column.add_child(_meta_prestige_body)
+
+	_meta_prestige_info = Label.new()
+	_meta_prestige_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_meta_prestige_info.add_theme_color_override("font_color", C_PRESTIGE)
+	_meta_prestige_info.add_theme_font_size_override("font_size", FONT_UPGRADE_PRICE)
+	column.add_child(_meta_prestige_info)
+
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	column.add_child(buttons)
+
+	var confirm := Button.new()
+	confirm.text = "Стерти все"
+	confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	confirm.custom_minimum_size = Vector2(0, 42)
+	confirm.add_theme_font_size_override("font_size", FONT_UPGRADE_PRICE)
+	UITheme.style_button(confirm, C_RED)
+	confirm.pressed.connect(_on_meta_prestige_confirmed)
+	buttons.add_child(confirm)
+
+	var cancel := Button.new()
+	cancel.text = "Ще ні"
+	cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel.custom_minimum_size = Vector2(0, 42)
+	cancel.add_theme_font_size_override("font_size", FONT_UPGRADE_PRICE)
+	UITheme.style_button(cancel, C_MUTED)
+	cancel.pressed.connect(_on_meta_prestige_cancelled)
+	buttons.add_child(cancel)
+
+
+func _on_meta_prestige_confirmed() -> void:
+	if _meta_prestige_overlay != null:
+		_meta_prestige_overlay.visible = false
+	if _prestige_tree_overlay != null and _prestige_tree_overlay.visible:
+		_close_prestige_tree()
+	GameState.meta_prestige()
+
+
+func _on_meta_prestige_cancelled() -> void:
+	if _meta_prestige_overlay != null:
+		_meta_prestige_overlay.visible = false
 
 
 func _on_reset_pressed() -> void:

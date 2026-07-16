@@ -194,6 +194,20 @@ const DEFS: Array[Dictionary] = [
 		"hidden": false,
 		"reward_loc_mult": 0.03,
 	},
+	{
+		"id": "meta_first",
+		"name": "Стоп, це навайбкоджено?",
+		"desc": "Ти стер усе. І все одно повернувся.",
+		"hint": "Умову приховано",
+		"hidden": true,
+	},
+	{
+		"id": "meta_sisyphus",
+		"name": "Сізіф",
+		"desc": "Петля без виходу. Ти щасливий.",
+		"hint": "Умову приховано",
+		"hidden": true,
+	},
 ]
 
 var unlocked: Dictionary = {}
@@ -327,6 +341,10 @@ func _is_unlocked(id: String) -> bool:
 			return gs.hype_events_clicked >= 1
 		"hype_10":
 			return gs.hype_events_clicked >= 10
+		"meta_first":
+			return gs.meta_level >= 1
+		"meta_sisyphus":
+			return gs.meta_level >= GameState.META_FINAL_LEVEL
 		"just_looking":
 			return false
 		_:
