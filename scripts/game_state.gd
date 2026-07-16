@@ -488,10 +488,17 @@ func get_max_affordable_count(upgrade_id: String) -> int:
 	var cap := UpgradeCatalog.get_max_owned(def) - owned
 	if cap <= 0:
 		return 0
-	var count := 0
-	while count < cap and can_buy_upgrade(upgrade_id, count + 1):
-		count += 1
-	return count
+	var funds := loc if UpgradeCatalog.costs_loc(def) else money
+	if funds <= 0.0:
+		return 0
+	var base := float(def["base_cost"])
+	var g := UPGRADE_COST_GROWTH
+	var first_cost := base * pow(g, owned) * upgrade_cost_mult
+	var n := int(floor(log(funds * (g - 1.0) / first_cost + 1.0) / log(g)))
+	n = clampi(n, 0, cap)
+	while n > 0 and not can_buy_upgrade(upgrade_id, n):
+		n -= 1
+	return n
 
 
 func get_upgrade_owned(upgrade_id: String) -> int:

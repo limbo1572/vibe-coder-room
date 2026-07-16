@@ -78,6 +78,7 @@ var _upgrade_rows: Dictionary = {}
 var _bulk_mode_index := 0
 var _bulk_tab_buttons: Array[Button] = []
 var _bonuses_body: VBoxContainer
+var _bonus_pool_used: int = 0
 var _onboarding_panel: PanelContainer
 var _onboarding_intro: Label
 var _onboarding_input_row: HBoxContainer
@@ -539,6 +540,9 @@ func _create_upgrade_row(def: Dictionary) -> PanelContainer:
 
 	row.set_meta("upgrade_id", def["id"])
 	row.set_meta("upgrade_def", def)
+	row.set_meta("buy_btn", buy)
+	row.set_meta("owned_lbl", owned_badge)
+	row.set_meta("total_lbl", total)
 	return row
 
 
@@ -1042,6 +1046,8 @@ func _create_skill_row(def: Dictionary) -> PanelContainer:
 	buy.pressed.connect(_on_skill_buy_pressed.bind(def["id"]))
 	box.add_child(buy)
 
+	row.set_meta("buy_btn", buy)
+	row.set_meta("lock_lbl", lock)
 	return row
 
 
@@ -1066,8 +1072,8 @@ func _open_prestige_tree() -> void:
 		return
 	_prestige_tree_open_points = GameState.prestige_points
 	_prestige_tree_open_skills = _count_owned_skills()
-	_refresh_prestige_tree()
 	_prestige_tree_overlay.visible = true
+	_refresh_prestige_tree()
 
 
 func _close_prestige_tree() -> void:
@@ -1469,6 +1475,8 @@ func _on_root_buy_pressed() -> void:
 
 
 func _refresh_prestige_tree() -> void:
+	if _prestige_tree_overlay == null or not _prestige_tree_overlay.visible:
+		return
 	if _prestige_tree_points_label != null:
 		_prestige_tree_points_label.text = "%d refactor pts" % GameState.prestige_points
 
@@ -1494,8 +1502,8 @@ func _refresh_prestige_tree() -> void:
 	for skill_id: String in _prestige_tree_rows:
 		var row: PanelContainer = _prestige_tree_rows[skill_id]
 		var def: Dictionary = row.get_meta("skill_def")
-		var buy := row.find_child("BuyButton", true, false) as Button
-		var lock := row.find_child("LockLabel", true, false) as Label
+		var buy := row.get_meta("buy_btn") as Button
+		var lock := row.get_meta("lock_lbl") as Label
 		if buy == null:
 			continue
 
@@ -1793,9 +1801,9 @@ func _refresh_upgrades() -> void:
 	for upgrade_id: String in _upgrade_rows:
 		var row: PanelContainer = _upgrade_rows[upgrade_id]
 		var def: Dictionary = row.get_meta("upgrade_def")
-		var buy := row.find_child("BuyButton", true, false) as Button
-		var owned_lbl := row.find_child("OwnedLabel", true, false) as Label
-		var total_lbl := row.find_child("TotalLabel", true, false) as Label
+		var buy := row.get_meta("buy_btn") as Button
+		var owned_lbl := row.get_meta("owned_lbl") as Label
+		var total_lbl := row.get_meta("total_lbl") as Label
 		if buy == null:
 			continue
 
@@ -1852,8 +1860,7 @@ func _refresh_upgrades() -> void:
 func _refresh_bonuses() -> void:
 	if _bonuses_body == null:
 		return
-	for child in _bonuses_body.get_children():
-		child.queue_free()
+	_bonus_pool_used = 0
 
 	var b: Dictionary = GameState.get_active_bonuses()
 	var click_total: float = b["click_total"]
@@ -1907,14 +1914,23 @@ func _refresh_bonuses() -> void:
 	if prestige > 1.0:
 		_add_bonus_line("Престиж (усі дії): ×%.1f" % prestige, Color("#b44cff"))
 
+	for i in range(_bonus_pool_used, _bonuses_body.get_child_count()):
+		(_bonuses_body.get_child(i) as CanvasItem).visible = false
+
 
 func _add_bonus_line(text: String, color: Color, font_size: int = FONT_BONUS) -> void:
-	var label := Label.new()
+	var label: Label
+	if _bonus_pool_used < _bonuses_body.get_child_count():
+		label = _bonuses_body.get_child(_bonus_pool_used) as Label
+	else:
+		label = Label.new()
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_bonuses_body.add_child(label)
+	label.visible = true
 	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_color_override("font_color", color)
 	label.add_theme_font_size_override("font_size", font_size)
-	_bonuses_body.add_child(label)
+	_bonus_pool_used += 1
 
 
 func _on_deploy_pressed() -> void:

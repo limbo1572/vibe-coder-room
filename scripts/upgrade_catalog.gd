@@ -13,9 +13,12 @@ enum EffectType {
 
 const DEFAULT_MAX_OWNED := 999_999
 
+static var _cache: Array[Dictionary] = []
+
 
 static func all() -> Array[Dictionary]:
-	return [
+	if _cache.is_empty():
+		_cache = [
 		# Onboarding
 		{
 			"id": "vibecode_click",
@@ -295,7 +298,8 @@ static func all() -> Array[Dictionary]:
 			"meme": "Чужий компʼютер за твої гроші",
 			"category": "deploy",
 		},
-	]
+		]
+	return _cache
 
 
 static func find(id: String) -> Dictionary:

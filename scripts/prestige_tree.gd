@@ -21,9 +21,12 @@ enum EffectType {
 const ROOT_ID := "sk_root"
 const ROOT_LOC_MULT := 1.25
 
+static var _cache: Array[Dictionary] = []
+
 
 static func all() -> Array[Dictionary]:
-	return [
+	if _cache.is_empty():
+		_cache = [
 		{
 			"id": ROOT_ID,
 			"name": "Стартап-енергія",
@@ -160,7 +163,8 @@ static func all() -> Array[Dictionary]:
 			"root_req": 5,
 			"effects": [{"type": EffectType.DEPLOY_RATE_MULT, "value": 1.5}],
 		},
-	]
+		]
+	return _cache
 
 
 static func find(id: String) -> Dictionary:
