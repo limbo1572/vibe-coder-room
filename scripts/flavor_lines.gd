@@ -21,7 +21,13 @@ const PRESTIGE_TEXTS := [
 
 const PRESTIGE_TEXT_CYCLE := "Ти ще тут? Добре. Я теж. Поїхали ще раз."
 
+const SAVE_PATH := "user://flavor_seen.json"
+
 var _shown: Dictionary = {}
+
+
+func _ready() -> void:
+	load_shown()
 
 
 func trigger(event_id: String, ctx: Dictionary = {}) -> void:
@@ -101,4 +107,43 @@ func _emit_once(key: String, voice: String, text: String) -> void:
 	if text.is_empty() or _shown.get(key, false):
 		return
 	_shown[key] = true
+	save_shown()
 	flavor_triggered.emit({"voice": voice, "text": text})
+
+
+func save_shown() -> void:
+	var data := {"shown": _shown.duplicate()}
+	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning(
+			"FlavorLines: failed to save %s (err %d)" % [SAVE_PATH, FileAccess.get_open_error()]
+		)
+		return
+	file.store_string(JSON.stringify(data, "\t"))
+	file.close()
+
+
+func load_shown() -> void:
+	_shown.clear()
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if file == null:
+		push_warning(
+			"FlavorLines: failed to load %s (err %d)" % [SAVE_PATH, FileAccess.get_open_error()]
+		)
+		return
+
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+
+	var raw: Variant = parsed.get("shown", {})
+	if typeof(raw) != TYPE_DICTIONARY:
+		return
+
+	for key: Variant in raw:
+		if bool(raw[key]):
+			_shown[str(key)] = true

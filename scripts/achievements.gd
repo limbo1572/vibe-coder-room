@@ -8,9 +8,16 @@ const DEFS: Array[Dictionary] = [
 	{
 		"id": "hello_bugs",
 		"name": "Hello, Bugs!",
-		"desc": "Перша програма. Перший баг. Гарний початок.",
+		"desc": "Перша програма запущена. Баги — питання часу.",
 		"hint": "Пройди туторіал — напиши перший рядок коду.",
 		"hidden": false,
+	},
+	{
+		"id": "first_fail",
+		"name": "Спочатку не вийшло",
+		"desc": "Класика жанру. Перший бін — комом.",
+		"hint": "Умову приховано",
+		"hidden": true,
 	},
 	{
 		"id": "clicker_1000",
@@ -269,6 +276,8 @@ func _is_unlocked(id: String) -> bool:
 	var gs := GameState
 	match id:
 		"hello_bugs":
+			return gs.hello_world_done
+		"first_fail":
 			return gs.hello_world_with_bug
 		"clicker_1000":
 			return gs.total_clicks >= 1000

@@ -214,6 +214,9 @@ func click_hype_event() -> Dictionary:
 		var income_sec := loc_per_sec * prod * deploy_rate * sqrt(prod)
 		var amount := minf(GRANT_BANK_PCT * money, GRANT_INCOME_SEC * income_sec) + 50.0
 		money += amount
+		if cycle_kickstart_active and money >= CYCLE_KICKSTART_CAP:
+			cycle_kickstart_active = false
+			recalculate_stats()
 		_clamp_stats()
 		result["type"] = "grant"
 		result["amount"] = amount
@@ -775,14 +778,10 @@ func load_game() -> bool:
 	total_play_time = float(data.get("total_play_time", 0.0))
 
 	var save_version := int(data.get("save_version", 0))
-	if save_version < 3:
-		click_unlocked = true
-		hello_world_done = true
-	else:
-		click_unlocked = bool(data.get("click_unlocked", false))
-		hello_world_done = bool(data.get("hello_world_done", false))
-		hello_world_with_bug = bool(data.get("hello_world_with_bug", false))
-		hello_world_hint_seen = bool(data.get("hello_world_hint_seen", false))
+	click_unlocked = bool(data.get("click_unlocked", false))
+	hello_world_done = bool(data.get("hello_world_done", false))
+	hello_world_with_bug = bool(data.get("hello_world_with_bug", false))
+	hello_world_hint_seen = bool(data.get("hello_world_hint_seen", false))
 
 	seen_prestige_intro = bool(data.get("seen_prestige_intro", false))
 
@@ -1285,6 +1284,11 @@ static func format_num(value: float) -> String:
 	if tier >= suffixes.size():
 		return "%.2e" % value
 	var scaled := value / pow(1000.0, tier)
+	if absf(scaled) >= 999.995:
+		tier += 1
+		if tier >= suffixes.size():
+			return "%.2e" % value
+		scaled = value / pow(1000.0, tier)
 	return "%.2f%s" % [scaled, suffixes[tier]]
 
 
