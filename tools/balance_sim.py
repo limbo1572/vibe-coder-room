@@ -86,7 +86,8 @@ class Sim:
                     rate=rate*deploy_mult, pm=pm, bug_mult=bug_mult,
                     auto_click=auto_click, auto_qa=auto_qa, cost_mult=cost_mult)
     def prod(self):
-        return max(0.1, min(1.0, 1.0 - self.bugs/(self.bugs+100.0)))
+        k=100.0+2.0*sum(v*self.up.get(n,0)*self.gen_mult(n) for n,b,v in GENS)
+        return max(0.1, min(1.0, 1.0 - self.bugs/(self.bugs+k)))
     def cost(self,base,owned,cm): return base*(1.15**owned)*cm
     def income_per_sec(self,s):
         p=self.prod()

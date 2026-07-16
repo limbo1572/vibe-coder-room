@@ -47,6 +47,7 @@ var money: float = 0.0
 var bugs: float = 0.0
 var loc_per_click: float = BASE_LOC_PER_CLICK
 var loc_per_sec: float = BASE_LOC_PER_SEC
+var codebase_lps: float = 0.0
 var deploy_rate: float = BASE_DEPLOY_RATE
 var qa_power: float = BASE_QA_POWER
 var prestige_mult: float = 1.0
@@ -265,6 +266,7 @@ func _sanitize_stat(value: float) -> float:
 func recalculate_stats() -> void:
 	loc_per_click = BASE_LOC_PER_CLICK
 	loc_per_sec = BASE_LOC_PER_SEC
+	codebase_lps = 0.0
 	deploy_rate = BASE_DEPLOY_RATE
 	qa_power = BASE_QA_POWER
 	_reset_skill_modifiers()
@@ -275,7 +277,9 @@ func recalculate_stats() -> void:
 			continue
 		match def["effect_type"]:
 			UpgradeCatalog.EffectType.LOC_PER_SEC:
-				loc_per_sec += def["effect_value"] * owned * generator_mult(def["id"])
+				var contrib: float = def["effect_value"] * owned * generator_mult(def["id"])
+				loc_per_sec += contrib
+				codebase_lps += contrib
 			UpgradeCatalog.EffectType.LOC_PER_CLICK_ADD:
 				loc_per_click += def["effect_value"] * owned
 			UpgradeCatalog.EffectType.QA_POWER:
@@ -459,7 +463,8 @@ func grant_prestige_points(amount: int) -> void:
 
 
 func productivity_factor() -> float:
-	var raw := clampf(1.0 - (bugs / (bugs + 100.0)), 0.1, 1.0)
+	var k := 100.0 + 2.0 * codebase_lps
+	var raw := clampf(1.0 - (bugs / (bugs + k)), 0.1, 1.0)
 	raw *= skill_productivity_mult
 	return clampf(raw, skill_productivity_floor, 1.0)
 
