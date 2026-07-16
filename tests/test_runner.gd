@@ -62,6 +62,7 @@ func _run_all() -> void:
 	_test_perfectionist_gate()
 	_test_deploy_risk()
 	_test_legacy_mode()
+	_test_news_ticker()
 	_test_save_load_roundtrip()
 
 
@@ -291,6 +292,58 @@ func _test_legacy_mode() -> void:
 	check(GameState.get_upgrade_owned("legacy_mode") == 0, "legacy: mode cleared")
 	check(GameState.get_upgrade_owned("code_freeze") == 0, "legacy: freeze cleared")
 	check(GameState.ever_entered_legacy, "legacy: ever flag survives freeze")
+
+
+func _test_news_ticker() -> void:
+	_fresh()
+	FlavorLines._last_ticker = ""
+	var c: Array[String] = FlavorLines.ticker_candidates()
+	for line: String in FlavorLines.TICKER_GENERIC:
+		check(c.has(line), "ticker: fresh has GENERIC line")
+	for line: String in FlavorLines.TICKER_META:
+		check(not c.has(line), "ticker: fresh has no META")
+	for line: String in FlavorLines.TICKER_LEGACY:
+		check(not c.has(line), "ticker: fresh has no LEGACY")
+
+	GameState.meta_level = 1
+	c = FlavorLines.ticker_candidates()
+	var has_meta := false
+	for line: String in FlavorLines.TICKER_META:
+		if c.has(line):
+			has_meta = true
+			break
+	check(has_meta, "ticker: META when meta_level > 0")
+
+	_fresh()
+	FlavorLines._last_ticker = ""
+	GameState.prestige_count = 3
+	GameState.money = 1_000_000.0
+	check(GameState.buy_upgrade("legacy_mode", 1), "ticker: buy legacy_mode")
+	c = FlavorLines.ticker_candidates()
+	var has_legacy := false
+	for line: String in FlavorLines.TICKER_LEGACY:
+		if c.has(line):
+			has_legacy = true
+			break
+	check(has_legacy, "ticker: LEGACY when legacy_active")
+
+	_fresh()
+	FlavorLines._last_ticker = ""
+	GameState.bugs = 10000.0
+	c = FlavorLines.ticker_candidates()
+	var has_bugs := false
+	for line: String in FlavorLines.TICKER_BUGS:
+		if c.has(line):
+			has_bugs = true
+			break
+	check(has_bugs, "ticker: BUGS when productivity low")
+
+	_fresh()
+	FlavorLines._last_ticker = ""
+	var first := FlavorLines.next_ticker_line(0.0)
+	var second := FlavorLines.next_ticker_line(0.0)
+	check(first != second, "ticker: no consecutive repeat")
+	check(not FlavorLines.next_ticker_line(0.999).is_empty(), "ticker: clamp index non-empty")
 
 
 func _test_save_load_roundtrip() -> void:

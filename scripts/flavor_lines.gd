@@ -21,9 +21,57 @@ const PRESTIGE_TEXTS := [
 
 const PRESTIGE_TEXT_CYCLE := "Ти ще тут? Добре. Я теж. Поїхали ще раз."
 
+const TICKER_GENERIC: Array[String] = [
+	"Новий JS-фреймворк вийшов, поки ти читав цей рядок",
+	"Опитування: 98% сіньйорів гуглять «як центрувати div»",
+	"Стартап залучив $40M на ідею «Uber, але для качок»",
+	"ШІ пройшов співбесіду у FAANG. Рекрутер не помітив",
+	"Дедлайн перенесли: тепер учора",
+	"Програміст вийшов на пенсію. Його TODO живе далі",
+	"Курс «Вайбкодинг за 7 днів» купили 2 млн людей. Випустились троє",
+	"Компанія замінила відділ QA на молитву",
+	"Вчені: 80% коду на Землі ніхто ніколи не читав",
+	"Мітинг про скорочення мітингів затягнувся на 4 години",
+	"Стендап тривав довше за спринт",
+	"Тімлід відкрив прод о 3 ночі. Прод відкрив тімліда",
+	"Продакт вивчив слово «мікросервіси». Всім приготуватись",
+	"git blame показав твоє імʼя. Ти там ніколи не працював",
+]
+
+const TICKER_BUGS: Array[String] = [
+	"Баг-трекер компанії визнано найбільшою БД країни",
+	"Користувачі кажуть «фіча». Розробники мовчать",
+	"Новий баг зʼявився швидше, ніж закрили старий. Знову",
+]
+
+const TICKER_RICH: Array[String] = [
+	"Forbes додав тебе у список «ІТ-люди, що не виходять з дому»",
+	"Твій бухгалтер більше не сміється з слова «крипта»",
+]
+
+const TICKER_LEGACY: Array[String] = [
+	"💀 Хтось торкнувся legacy. Свічки запалено",
+	"Аналітики: твій код підозріло швидкий. І підозрілий",
+]
+
+const TICKER_META: Array[String] = [
+	"Симуляція стабільна. Продовжуй клікати",
+	"Цей заголовок згенеровано. Як і попередній. Як і ти",
+]
+
+const TICKER_PRESTIGE: Array[String] = [
+	"Індустрія переписала все на новий фреймворк. Знову",
+	"Опитування: «цього разу буде чисто» — вірять 100% опитаних",
+]
+
+const TICKER_FRIDAY: Array[String] = [
+	"Пʼятниця, 17:00. Хтось десь тисне deploy. Помолимось",
+]
+
 const SAVE_PATH := "user://flavor_seen.json"
 
 var _shown: Dictionary = {}
+var _last_ticker := ""
 
 
 func _ready() -> void:
@@ -62,6 +110,40 @@ func prestige_text(count: int) -> String:
 	if count < PRESTIGE_TEXTS.size():
 		return PRESTIGE_TEXTS[count]
 	return PRESTIGE_TEXT_CYCLE
+
+
+func ticker_candidates() -> Array[String]:
+	var out: Array[String] = []
+	out.append_array(TICKER_GENERIC)
+	if GameState.productivity_factor() < 0.7:
+		out.append_array(TICKER_BUGS)
+	if GameState.money >= 100000.0:
+		out.append_array(TICKER_RICH)
+	if GameState.legacy_active():
+		out.append_array(TICKER_LEGACY)
+	if GameState.meta_level > 0:
+		out.append_array(TICKER_META)
+	if GameState.prestige_count >= 1:
+		out.append_array(TICKER_PRESTIGE)
+	var dt := Time.get_datetime_dict_from_system()
+	if int(dt.get("weekday", 0)) == 5 and int(dt.get("hour", 0)) >= 17:
+		out.append_array(TICKER_FRIDAY)
+	return out
+
+
+func next_ticker_line(rng_roll: float = -1.0) -> String:
+	var candidates := ticker_candidates()
+	if candidates.is_empty():
+		return ""
+	var roll := randf() if rng_roll < 0.0 else rng_roll
+	var index := int(roll * float(candidates.size()))
+	index = clampi(index, 0, candidates.size() - 1)
+	var line := candidates[index]
+	if line == _last_ticker and candidates.size() > 1:
+		index = (index + 1) % candidates.size()
+		line = candidates[index]
+	_last_ticker = line
+	return line
 
 
 func _emit_bug_threshold(level: int) -> void:

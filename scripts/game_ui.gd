@@ -26,6 +26,7 @@ const BULK_MODES := [1, 5, 10, 0]  # 0 = Макс
 const BULK_TAB_LABELS := ["×1", "×5", "×10", "Макс"]
 
 const HELLO_WORLD_ANSWER := "print(\"Hello World\")"
+const TICKER_INTERVAL := 12.0
 const ONBOARDING_INTRO := (
 	"Колись ти захотів стати програмістом. Напиши свій перший рядок коду."
 )
@@ -121,6 +122,9 @@ var _hype_icon: Button
 var _hype_icon_tween: Tween
 var _legacy_icon: Button
 var _legacy_icon_tween: Tween
+var _ticker_label: Label
+var _ticker_timer: float = 0.0
+var _ticker_tween: Tween
 
 
 func _ready() -> void:
@@ -140,13 +144,53 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if _passive_pending_gain <= 0.0:
+	if _passive_pending_gain > 0.0:
+		_passive_popup_timer += delta
+		if _passive_popup_timer >= PASSIVE_POPUP_BATCH_SEC:
+			show_passive_popup(_passive_pending_gain)
+			_passive_pending_gain = 0.0
+			_passive_popup_timer = 0.0
+	_tick_news_ticker(delta)
+
+
+func _tick_news_ticker(delta: float) -> void:
+	if _ticker_label == null:
 		return
-	_passive_popup_timer += delta
-	if _passive_popup_timer >= PASSIVE_POPUP_BATCH_SEC:
-		show_passive_popup(_passive_pending_gain)
-		_passive_pending_gain = 0.0
-		_passive_popup_timer = 0.0
+	var show := GameState.click_unlocked
+	if _ticker_label.visible != show:
+		_ticker_label.visible = show
+		if show:
+			_apply_ticker_line(FlavorLines.next_ticker_line(), false)
+			_ticker_timer = 0.0
+	if not show:
+		return
+	_ticker_timer += delta
+	if _ticker_timer < TICKER_INTERVAL:
+		return
+	_ticker_timer = 0.0
+	_apply_ticker_line(FlavorLines.next_ticker_line(), true)
+
+
+func _apply_ticker_line(line: String, fade: bool) -> void:
+	if _ticker_label == null or line.is_empty():
+		return
+	var text := "▮ NEWS: %s" % line
+	if not fade:
+		if _ticker_tween != null and _ticker_tween.is_valid():
+			_ticker_tween.kill()
+			_ticker_tween = null
+		_ticker_label.modulate.a = 1.0
+		_ticker_label.text = text
+		return
+	if _ticker_tween != null and _ticker_tween.is_valid():
+		_ticker_tween.kill()
+	_ticker_tween = create_tween()
+	_ticker_tween.tween_property(_ticker_label, "modulate:a", 0.0, 0.4)
+	_ticker_tween.tween_callback(func() -> void:
+		if _ticker_label != null:
+			_ticker_label.text = text
+	)
+	_ticker_tween.tween_property(_ticker_label, "modulate:a", 1.0, 0.4)
 
 
 func _on_passive_gain(gain: float) -> void:
@@ -221,6 +265,7 @@ func _build_ui() -> void:
 	_build_bonuses_panel(root)
 	_build_bottom_bar(root)
 	_build_reset_button(root)
+	_build_news_ticker(root)
 	_build_greenfield_dialog()
 	_build_prestige_tree_menu(root)
 	_build_achievements_menu(root)
@@ -637,6 +682,26 @@ func _build_reset_button(root: Control) -> void:
 	UITheme.style_button(_greenfield_button, C_CYAN)
 	_greenfield_button.pressed.connect(_on_greenfield_pressed)
 	root.add_child(_greenfield_button)
+
+
+func _build_news_ticker(root: Control) -> void:
+	var label := Label.new()
+	_ticker_label = label
+	label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	label.offset_left = 16.0
+	label.offset_right = -16.0
+	label.offset_top = -18.0
+	label.offset_bottom = -2.0
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_override("font", MONO_FONT)
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", C_MUTED)
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.clip_text = true
+	label.visible = GameState.click_unlocked
+	if label.visible:
+		_apply_ticker_line(FlavorLines.next_ticker_line(), false)
+	root.add_child(label)
 
 
 func _build_greenfield_dialog() -> void:
