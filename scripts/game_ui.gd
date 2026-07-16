@@ -131,6 +131,7 @@ func _ready() -> void:
 	FlavorLines.flavor_triggered.connect(_on_flavor_triggered)
 	GameState.captcha_triggered.connect(_on_captcha_triggered)
 	GameState.hype_spawned.connect(_on_hype_spawned)
+	GameState.deploy_incident.connect(_on_deploy_incident)
 	_refresh_all()
 	call_deferred("_show_offline_popup_if_needed")
 
@@ -1939,6 +1940,12 @@ func _refresh_stats() -> void:
 			_meta_label.text = ""
 
 	_deploy_button.disabled = GameState.loc <= 0.0
+	if _deploy_button != null and GameState.click_unlocked:
+		var deploy_text := "git push — DEPLOY"
+		var incident_chance := GameState.deploy_incident_chance()
+		if incident_chance > 0.0:
+			deploy_text += " ⚠ %d%%" % int(round(incident_chance * 100.0))
+		_deploy_button.text = deploy_text
 
 	if _prestige_button != null:
 		var can := GameState.can_prestige()
@@ -2099,6 +2106,55 @@ func _add_bonus_line(text: String, color: Color, font_size: int = FONT_BONUS) ->
 
 func _on_deploy_pressed() -> void:
 	GameState.deploy()
+
+
+func _on_deploy_incident() -> void:
+	_show_incident_banner()
+
+
+func _show_incident_banner() -> void:
+	if _popup_layer == null:
+		return
+
+	var slot := 0
+	for child in _popup_layer.get_children():
+		if child.has_meta("popup_banner"):
+			slot += 1
+
+	var banner := PanelContainer.new()
+	banner.set_meta("popup_banner", true)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(C_PANEL, 0.95)
+	style.set_corner_radius_all(8)
+	style.set_border_width_all(1)
+	style.border_color = Color(C_RED, 0.85)
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	banner.add_theme_stylebox_override("panel", style)
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var label := Label.new()
+	label.text = "> INCIDENT: прод впав. Гроші x0.5, баги в подарунок."
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", FONT_UPGRADE_NAME)
+	label.add_theme_color_override("font_color", Color("#cc8866"))
+	label.add_theme_font_override("font", MONO_FONT)
+	banner.add_child(label)
+
+	banner.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	var y_off := -56.0 - float(slot) * 52.0
+	banner.offset_left = 16.0
+	banner.offset_top = y_off
+	banner.offset_right = 480.0
+	banner.offset_bottom = y_off + 40.0
+	_popup_layer.add_child(banner)
+
+	var tween := create_tween()
+	tween.tween_interval(5.0)
+	tween.tween_property(banner, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(banner.queue_free)
 
 
 func _on_prestige_pressed() -> void:

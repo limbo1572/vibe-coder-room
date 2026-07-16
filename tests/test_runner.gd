@@ -60,6 +60,7 @@ func _run_all() -> void:
 	_test_bug_dilution()
 	_test_buffs_and_hype()
 	_test_perfectionist_gate()
+	_test_deploy_risk()
 	_test_save_load_roundtrip()
 
 
@@ -224,6 +225,40 @@ func _test_perfectionist_gate() -> void:
 	GameState._tick_achievement_timers(61.0)
 	check(GameState.zero_bug_streak >= 60.0, "perfectionist: streak after unlock")
 	check(Achievements._is_unlocked("perfectionist"), "ach: perfectionist condition")
+
+
+func _test_deploy_risk() -> void:
+	_fresh()
+	GameState.recalculate_stats()
+	var chance_clean := GameState.deploy_incident_chance()
+	if chance_clean == 0.0:
+		check(true, "deploy risk: safe at full prod (no friday bonus)")
+	else:
+		check(approx(chance_clean, 0.10), "deploy risk: only friday bonus at full prod")
+
+	GameState.bugs = 10000.0
+	GameState.recalculate_stats()
+	check(GameState.productivity_factor() < 0.5, "deploy risk: prod below safe")
+	var chance_risky := GameState.deploy_incident_chance()
+	check(chance_risky > 0.0, "deploy risk: chance > 0 when prod low")
+
+	GameState.loc = 100.0
+	GameState.money = 0.0
+	GameState.incidents_survived = 0
+	var bugs_before := GameState.bugs
+	var safe_earned := GameState.deploy(0.99)
+	check(safe_earned > 0.0, "deploy risk: high roll pays out")
+	check(GameState.incidents_survived == 0, "deploy risk: high roll no incident")
+	check(approx(GameState.bugs, bugs_before), "deploy risk: high roll bugs unchanged")
+
+	GameState.loc = 100.0
+	GameState.money = 0.0
+	bugs_before = GameState.bugs
+	var bad_earned := GameState.deploy(0.0)
+	check(approx(bad_earned, safe_earned * 0.5), "deploy risk: incident halves payout")
+	check(GameState.bugs > bugs_before, "deploy risk: incident adds bugs")
+	check(GameState.incidents_survived == 1, "deploy risk: survived counter +1")
+	check(Achievements._is_unlocked("incident_10") == false, "deploy risk: ach not yet at 1")
 
 
 func _test_save_load_roundtrip() -> void:

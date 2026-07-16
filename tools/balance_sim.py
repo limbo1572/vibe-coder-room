@@ -1,6 +1,7 @@
 """Бот-гравець Vibe Coder Tycoon. Усі формули — 1:1 з game_state.gd (HEAD: prestige money reset + kickstart).
 Мета: час кожного циклу престижу. Критерій здоров'я: ріст часу циклу <= x1.5."""
 import math
+import random
 
 CLICKS_PER_SEC = 1.0          # ледачий гравець
 DEPLOY_EVERY = 15.0           # деплой кожні 15с
@@ -173,7 +174,11 @@ class Sim:
             self.bugs=max(0.0,self.bugs-(s["qa"]+s["auto_qa"])*dt)
             since_deploy+=dt
             if since_deploy>=DEPLOY_EVERY and self.loc>0:
-                self.money+=self.loc*s["rate"]*math.sqrt(self.prod())
+                p_now=self.prod()
+                payout=self.loc*s["rate"]*math.sqrt(p_now)
+                if random.random() < max(0.0, 0.5 - p_now):
+                    payout*=0.5
+                self.money+=payout
                 self.loc=0.0; since_deploy=0.0
                 if self.kickstart_active and self.money >= 10_000.0:
                     self.kickstart_active = False
@@ -190,6 +195,7 @@ class Sim:
         return False
 
 def run(label,tools=False,flat=False,n=8):
+    random.seed(42)
     s=Sim(tools,flat)
     print(f"\n== {label} ==")
     print(f"{'cycle':>5} {'поріг $':>12} {'хв':>8} {'ріст':>6}  дерево")

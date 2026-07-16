@@ -208,6 +208,13 @@ const DEFS: Array[Dictionary] = [
 		"hint": "Умову приховано",
 		"hidden": true,
 	},
+	{
+		"id": "incident_10",
+		"name": "Інцидент-менеджер",
+		"desc": "Постмортем пишеться сам.",
+		"hint": "Переживи 10 інцидентів на проді",
+		"hidden": false,
+	},
 ]
 
 var unlocked: Dictionary = {}
@@ -345,6 +352,8 @@ func _is_unlocked(id: String) -> bool:
 			return gs.meta_level >= 1
 		"meta_sisyphus":
 			return gs.meta_level >= GameState.META_FINAL_LEVEL
+		"incident_10":
+			return gs.incidents_survived >= 10
 		"just_looking":
 			return false
 		_:

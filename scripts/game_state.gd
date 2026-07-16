@@ -9,6 +9,7 @@ signal stats_changed
 signal passive_gain(loc_gain: float)
 signal captcha_triggered
 signal hype_spawned
+signal deploy_incident
 
 
 const SAVE_PATH := "user://save.json"
@@ -43,6 +44,12 @@ const PRESTIGE_THRESHOLD_STEP := 3.0
 const META_PRESTIGE_GATE := 10
 const META_LOC_MULT := 3.0
 const META_FINAL_LEVEL := 3
+const INCIDENT_PROD_SAFE := 0.5
+const INCIDENT_MAX_CHANCE := 0.4
+const INCIDENT_MONEY_PENALTY := 0.5
+const INCIDENT_BUG_PCT := 0.10
+const FRIDAY_DEPLOY_BONUS := 1.25
+const FRIDAY_INCIDENT_CHANCE := 0.10
 const STAT_SOFT_CAP := 1e100
 const MEASURE_MODE := true   # логер віх для збору кривої балансу (заїзд: true, реліз: false)
 const DEBUG_CHEATS := false  # чити+дебаг-панелі для розробки (заїзд: false, реліз: false)
@@ -116,6 +123,7 @@ var captcha_count: int = 0
 var buff_type: String = ""
 var buff_time_left: float = 0.0
 var hype_events_clicked: int = 0
+var incidents_survived: int = 0
 
 var last_tick_time: float = 0.0
 var total_play_time: float = 0.0  # сумарний активний ігровий час, сек
@@ -735,6 +743,7 @@ func save_game() -> void:
 		"afk_return": afk_return,
 		"captcha_count": captcha_count,
 		"hype_events_clicked": hype_events_clicked,
+		"incidents_survived": incidents_survived,
 		"milestone_log": (
 			_milestone_logger.serialize() if (_milestone_logger != null and MEASURE_MODE) else {}
 		),
@@ -818,6 +827,7 @@ func load_game() -> bool:
 	afk_return = bool(data.get("afk_return", false))
 	captcha_count = int(data.get("captcha_count", 0))
 	hype_events_clicked = int(data.get("hype_events_clicked", 0))
+	incidents_survived = int(data.get("incidents_survived", 0))
 	captcha_required = false
 	buff_type = ""
 	buff_time_left = 0.0
@@ -968,6 +978,7 @@ func _apply_default_state() -> void:
 	captcha_required = false
 	captcha_count = 0
 	hype_events_clicked = 0
+	incidents_survived = 0
 	buff_type = ""
 	buff_time_left = 0.0
 	_hype_spawn_timer = randf_range(HYPE_SPAWN_MIN_SEC, HYPE_SPAWN_MAX_SEC)
@@ -1196,15 +1207,33 @@ func _tick_auto_click(delta: float) -> void:
 		click_code(false)
 
 
-func deploy() -> float:
+func deploy_incident_chance() -> float:
+	var chance := clampf(INCIDENT_PROD_SAFE - productivity_factor(), 0.0, INCIDENT_MAX_CHANCE)
+	var dt := Time.get_datetime_dict_from_system()
+	if int(dt.get("weekday", 0)) == 5 and int(dt.get("hour", 0)) >= 17:
+		chance += FRIDAY_INCIDENT_CHANCE
+	return chance
+
+
+func deploy(rng_roll: float = -1.0) -> float:
 	if loc <= 0.0:
 		return 0.0
 	if productivity_factor() < 0.3:
 		deployed_low_prod = true
 	var dt := Time.get_datetime_dict_from_system()
-	if int(dt.get("weekday", 0)) == 5 and int(dt.get("hour", 0)) >= 17:
+	var is_friday_evening := int(dt.get("weekday", 0)) == 5 and int(dt.get("hour", 0)) >= 17
+	if is_friday_evening:
 		friday_deploy = true
-	var earned := loc * deploy_rate * prestige_mult * sqrt(productivity_factor())
+	var deployed_loc := loc
+	var earned := deployed_loc * deploy_rate * prestige_mult * sqrt(productivity_factor())
+	if is_friday_evening:
+		earned *= FRIDAY_DEPLOY_BONUS
+	var roll := randf() if rng_roll < 0.0 else rng_roll
+	if roll < deploy_incident_chance():
+		earned *= INCIDENT_MONEY_PENALTY
+		bugs += deployed_loc * INCIDENT_BUG_PCT
+		incidents_survived += 1
+		deploy_incident.emit()
 	money += earned
 	if cycle_kickstart_active and money >= CYCLE_KICKSTART_CAP:
 		cycle_kickstart_active = false
