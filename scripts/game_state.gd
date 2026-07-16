@@ -1328,6 +1328,26 @@ func money_for_next_prestige_point() -> float:
 	return prestige_threshold() * pow(PRESTIGE_THRESHOLD_STEP, float(preview_prestige_points()))
 
 
+func prestige_progress() -> Dictionary:
+	var target: float
+	var mode: String
+	if not can_prestige():
+		target = prestige_threshold()
+		mode = "threshold"
+	else:
+		target = money_for_next_prestige_point()
+		mode = "next_point"
+	var ratio := 0.0
+	if target > 0.0:
+		ratio = clampf(money / target, 0.0, 1.0)
+	return {
+		"ratio": ratio,
+		"money": money,
+		"target": target,
+		"mode": mode,
+	}
+
+
 func can_meta_prestige() -> bool:
 	return prestige_count >= META_PRESTIGE_GATE
 

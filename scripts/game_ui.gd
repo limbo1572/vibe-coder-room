@@ -122,9 +122,12 @@ var _hype_icon: Button
 var _hype_icon_tween: Tween
 var _legacy_icon: Button
 var _legacy_icon_tween: Tween
+var _ticker_panel: PanelContainer
 var _ticker_label: Label
 var _ticker_timer: float = 0.0
 var _ticker_tween: Tween
+var _prestige_progress_label: Label
+var _prestige_progress_bar: ProgressBar
 
 
 func _ready() -> void:
@@ -154,11 +157,11 @@ func _process(delta: float) -> void:
 
 
 func _tick_news_ticker(delta: float) -> void:
-	if _ticker_label == null:
+	if _ticker_panel == null or _ticker_label == null:
 		return
 	var show := GameState.click_unlocked
-	if _ticker_label.visible != show:
-		_ticker_label.visible = show
+	if _ticker_panel.visible != show:
+		_ticker_panel.visible = show
 		if show:
 			_apply_ticker_line(FlavorLines.next_ticker_line(), false)
 			_ticker_timer = 0.0
@@ -174,23 +177,23 @@ func _tick_news_ticker(delta: float) -> void:
 func _apply_ticker_line(line: String, fade: bool) -> void:
 	if _ticker_label == null or line.is_empty():
 		return
-	var text := "▮ NEWS: %s" % line
+	var fade_node: CanvasItem = _ticker_panel if _ticker_panel != null else _ticker_label
 	if not fade:
 		if _ticker_tween != null and _ticker_tween.is_valid():
 			_ticker_tween.kill()
 			_ticker_tween = null
-		_ticker_label.modulate.a = 1.0
-		_ticker_label.text = text
+		fade_node.modulate.a = 1.0
+		_ticker_label.text = line
 		return
 	if _ticker_tween != null and _ticker_tween.is_valid():
 		_ticker_tween.kill()
 	_ticker_tween = create_tween()
-	_ticker_tween.tween_property(_ticker_label, "modulate:a", 0.0, 0.4)
+	_ticker_tween.tween_property(fade_node, "modulate:a", 0.0, 0.4)
 	_ticker_tween.tween_callback(func() -> void:
 		if _ticker_label != null:
-			_ticker_label.text = text
+			_ticker_label.text = line
 	)
-	_ticker_tween.tween_property(_ticker_label, "modulate:a", 1.0, 0.4)
+	_ticker_tween.tween_property(fade_node, "modulate:a", 1.0, 0.4)
 
 
 func _on_passive_gain(gain: float) -> void:
@@ -343,6 +346,29 @@ func _build_top_bar(root: Control) -> void:
 	UITheme.style_button(_achievements_button, C_CYAN)
 	_achievements_button.pressed.connect(_open_achievements)
 	column.add_child(_achievements_button)
+
+	_prestige_progress_label = Label.new()
+	_prestige_progress_label.visible = false
+	_prestige_progress_label.add_theme_font_override("font", MONO_FONT)
+	_prestige_progress_label.add_theme_font_size_override("font_size", 12)
+	_prestige_progress_label.add_theme_color_override("font_color", C_PRESTIGE)
+	column.add_child(_prestige_progress_label)
+
+	_prestige_progress_bar = ProgressBar.new()
+	_prestige_progress_bar.visible = false
+	_prestige_progress_bar.custom_minimum_size = Vector2(0, 18)
+	_prestige_progress_bar.show_percentage = false
+	_prestige_progress_bar.max_value = 1.0
+	_prestige_progress_bar.value = 0.0
+	var bar_bg := StyleBoxFlat.new()
+	bar_bg.bg_color = Color(0.04, 0.03, 0.08, 0.95)
+	bar_bg.set_corner_radius_all(2)
+	var bar_fill := StyleBoxFlat.new()
+	bar_fill.bg_color = Color(C_PRESTIGE, 0.8)
+	bar_fill.set_corner_radius_all(2)
+	_prestige_progress_bar.add_theme_stylebox_override("background", bar_bg)
+	_prestige_progress_bar.add_theme_stylebox_override("fill", bar_fill)
+	column.add_child(_prestige_progress_bar)
 
 
 func _build_onboarding_panel(root: Control) -> void:
@@ -632,8 +658,8 @@ func _build_bottom_bar(root: Control) -> void:
 	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	bottom.offset_left = 352.0
 	bottom.offset_right = -(UPGRADE_PANEL_WIDTH + UPGRADE_PANEL_MARGIN + 8.0)
-	bottom.offset_bottom = -16.0
-	bottom.offset_top = -64.0
+	bottom.offset_bottom = -46.0
+	bottom.offset_top = -94.0
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
 	bottom.add_theme_constant_override("separation", 16)
 	bottom.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -659,9 +685,9 @@ func _build_reset_button(root: Control) -> void:
 	var btn := Button.new()
 	btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	btn.offset_left = -(UPGRADE_PANEL_WIDTH + UPGRADE_PANEL_MARGIN + 180.0)
-	btn.offset_top = -52.0
+	btn.offset_top = -82.0
 	btn.offset_right = -UPGRADE_PANEL_MARGIN
-	btn.offset_bottom = -16.0
+	btn.offset_bottom = -46.0
 	btn.text = "Скинути прогрес"
 	btn.add_theme_font_size_override("font_size", 13)
 	btn.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -672,9 +698,9 @@ func _build_reset_button(root: Control) -> void:
 	_greenfield_button = Button.new()
 	_greenfield_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_greenfield_button.offset_left = -(UPGRADE_PANEL_WIDTH + UPGRADE_PANEL_MARGIN + 180.0 + 248.0)
-	_greenfield_button.offset_top = -52.0
+	_greenfield_button.offset_top = -82.0
 	_greenfield_button.offset_right = -(UPGRADE_PANEL_WIDTH + UPGRADE_PANEL_MARGIN + 180.0 + 8.0)
-	_greenfield_button.offset_bottom = -16.0
+	_greenfield_button.offset_bottom = -46.0
 	_greenfield_button.add_theme_font_size_override("font_size", 12)
 	_greenfield_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_greenfield_button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -685,23 +711,53 @@ func _build_reset_button(root: Control) -> void:
 
 
 func _build_news_ticker(root: Control) -> void:
+	var panel := PanelContainer.new()
+	_ticker_panel = panel
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	panel.offset_left = 0.0
+	panel.offset_right = 0.0
+	panel.offset_top = -30.0
+	panel.offset_bottom = 0.0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.03, 0.08, 0.92)
+	style.border_color = Color(C_CYAN, 0.25)
+	style.border_width_top = 1
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 4.0
+	style.content_margin_bottom = 4.0
+	panel.add_theme_stylebox_override("panel", style)
+
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 6)
+	panel.add_child(row)
+
+	var prefix := Label.new()
+	prefix.text = "▮ NEWS:"
+	prefix.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prefix.add_theme_font_override("font", MONO_FONT)
+	prefix.add_theme_font_size_override("font_size", 14)
+	prefix.add_theme_color_override("font_color", C_CYAN)
+	row.add_child(prefix)
+
 	var label := Label.new()
 	_ticker_label = label
-	label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	label.offset_left = 16.0
-	label.offset_right = -16.0
-	label.offset_top = -18.0
-	label.offset_bottom = -2.0
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_font_override("font", MONO_FONT)
-	label.add_theme_font_size_override("font_size", 12)
-	label.add_theme_color_override("font_color", C_MUTED)
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", C_TEXT)
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.clip_text = true
-	label.visible = GameState.click_unlocked
-	if label.visible:
+	row.add_child(label)
+
+	panel.visible = GameState.click_unlocked
+	if panel.visible:
 		_apply_ticker_line(FlavorLines.next_ticker_line(), false)
-	root.add_child(label)
+	root.add_child(panel)
 
 
 func _build_greenfield_dialog() -> void:
@@ -2107,6 +2163,21 @@ func _refresh_stats() -> void:
 	_refresh_achievements_button()
 	if _achievements_button != null:
 		_achievements_button.visible = GameState.click_unlocked
+
+	if _prestige_progress_label != null and _prestige_progress_bar != null:
+		var show_progress := GameState.click_unlocked and GameState.total_deploys > 0
+		_prestige_progress_label.visible = show_progress
+		_prestige_progress_bar.visible = show_progress
+		if show_progress:
+			var prog: Dictionary = GameState.prestige_progress()
+			var mode := str(prog.get("mode", "threshold"))
+			var money_s := GameState.format_num(float(prog.get("money", 0.0)))
+			var target_s := GameState.format_num(float(prog.get("target", 0.0)))
+			if mode == "next_point":
+				_prestige_progress_label.text = "До +1 очка: $%s / $%s" % [money_s, target_s]
+			else:
+				_prestige_progress_label.text = "До рефактору: $%s / $%s" % [money_s, target_s]
+			_prestige_progress_bar.value = float(prog.get("ratio", 0.0))
 
 
 func _refresh_upgrades() -> void:

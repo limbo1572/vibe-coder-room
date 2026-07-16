@@ -52,6 +52,7 @@ func _run_all() -> void:
 	_test_onboarding_and_achievements()
 	_test_click_unlock_and_manual_clicks()
 	_test_prestige_points_overshoot()
+	_test_prestige_progress()
 	_test_prestige_reset()
 	_test_meta_prestige_chain()
 	_test_format_num()
@@ -120,6 +121,31 @@ func _test_prestige_points_overshoot() -> void:
 	check(GameState.preview_prestige_points() == 3, "prestige: +3 at 9x")
 	GameState.money = thr
 	check(approx(GameState.money_for_next_prestige_point(), thr * 3.0), "prestige: next point hint at 3x")
+
+
+func _test_prestige_progress() -> void:
+	_fresh()
+	GameState.money = 5000.0
+	var p: Dictionary = GameState.prestige_progress()
+	check(str(p.get("mode", "")) == "threshold", "progress: mode threshold below gate")
+	check(approx(float(p.get("ratio", -1.0)), 0.5), "progress: ratio 0.5 at half threshold")
+	check(approx(float(p.get("target", 0.0)), 10000.0), "progress: target is threshold")
+
+	GameState.money = 10000.0
+	p = GameState.prestige_progress()
+	check(str(p.get("mode", "")) == "next_point", "progress: mode next_point at gate")
+	check(approx(float(p.get("target", 0.0)), 30000.0), "progress: target 3x threshold")
+	check(approx(float(p.get("ratio", -1.0)), 10000.0 / 30000.0), "progress: ratio at gate")
+
+	GameState.money = 29000.0
+	p = GameState.prestige_progress()
+	check(float(p.get("ratio", 1.0)) < 1.0, "progress: under next point ratio < 1")
+
+	GameState.money = 90001.0
+	p = GameState.prestige_progress()
+	check(GameState.preview_prestige_points() == 3, "progress: preview 3 at 90001")
+	check(approx(float(p.get("target", 0.0)), 270000.0), "progress: next target 270k")
+	check(approx(float(p.get("ratio", -1.0)), 90001.0 / 270000.0), "progress: ratio ~0.333")
 
 
 func _test_prestige_reset() -> void:
