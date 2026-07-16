@@ -37,6 +37,7 @@ static func all() -> Array[Dictionary]:
 			"effect_label": "+0.2 LoC/s",
 			"meme": "Копіпаст без капчі",
 			"category": "generators",
+			"max_owned": 150,
 		},
 		{
 			"id": "chatgpt",

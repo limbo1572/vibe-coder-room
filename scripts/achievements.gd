@@ -297,6 +297,8 @@ func _is_unlocked(id: String) -> bool:
 			return gs.spam_detected
 		"near_prestige":
 			return gs.near_prestige
+		"afk_return":
+			return gs.afk_return
 		"just_looking":
 			return false
 		_:

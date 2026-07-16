@@ -151,7 +151,7 @@ func _process(delta: float) -> void:
 
 
 func _tick_achievement_timers(delta: float) -> void:
-	if bugs < 1.0:
+	if click_unlocked and bugs < 1.0:
 		zero_bug_streak += delta
 	else:
 		zero_bug_streak = 0.0
@@ -737,8 +737,6 @@ func load_game() -> bool:
 		var offline_gap := now - saved_tick
 		if offline_gap >= 172800.0:
 			afk_return = true
-			if Achievements != null and not Achievements.is_unlocked("afk_return"):
-				Achievements.call_deferred("unlock_by_event", "afk_return")
 	if saved_tick > 0.0 and offline_progress_enabled:
 		var elapsed := minf(now - saved_tick, OFFLINE_CAP_SEC)
 		if elapsed > 0.0:
@@ -1052,10 +1050,10 @@ func click_code(is_manual: bool = true) -> float:
 	_clamp_stats()
 	if _milestone_logger != null and gain > 0.0:
 		_milestone_logger.record_click()
-	total_clicks += 1
 	if is_manual:
+		total_clicks += 1
 		_captcha_clicks_this_sec += 1
-	_record_click_for_spam()
+		_record_click_for_spam()
 	stats_changed.emit()
 	return gain
 
