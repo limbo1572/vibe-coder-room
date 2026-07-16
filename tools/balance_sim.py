@@ -8,6 +8,19 @@ PAYBACK_HORIZON = 900.0          # окупнiсть до 15хв — граве�
 
 GENS = [("stackoverflow",5,0.2),("chatgpt",100,1.0),("junior",500,4.0),
         ("youtube_senior",3000,20.0),("ai_army",20000,120.0)]
+# (id, target, base_cost, unlock_at, mult)
+TIERS = [
+    ("tier_stackoverflow_10","stackoverflow",200,10,2.0),
+    ("tier_stackoverflow_25","stackoverflow",1600,25,2.0),
+    ("tier_chatgpt_10","chatgpt",4000,10,2.0),
+    ("tier_chatgpt_25","chatgpt",33000,25,2.0),
+    ("tier_junior_10","junior",20000,10,2.0),
+    ("tier_junior_25","junior",165000,25,2.0),
+    ("tier_youtube_senior_10","youtube_senior",120000,10,2.0),
+    ("tier_youtube_senior_25","youtube_senior",1000000,25,2.0),
+    ("tier_ai_army_10","ai_army",800000,10,2.0),
+    ("tier_ai_army_25","ai_army",6600000,25,2.0),
+]
 CLICK_ADD = [("mech_keyboard",50,1.0),("autocomplete",2000,5.0)]
 CLICK_MULT = [("two_hands",300,2.0)]   # max 1
 QA = [("linter",200,0.5),("unit_tests",1500,3.0),("qa_engineer",10000,15.0)]
@@ -41,10 +54,15 @@ class Sim:
         self.loc=0.0; self.money=0.0; self.bugs=0.0
         self.up={}
         if "sk_seed" in self.owned_sk: self.money=500.0
+    def gen_mult(self, gen_id):
+        m=1.0
+        for tid,tgt,_,_un,mv in TIERS:
+            if tgt==gen_id and self.up.get(tid,0)>0: m*=mv
+        return m
     # --- стати з recalculate_stats ---
     def stats(self):
         lps=0.0; lpc=1.0; qa=0.0; rate=0.10
-        for i,(n,b,v) in enumerate(GENS): lps+=v*self.up.get(n,0)
+        for n,b,v in GENS: lps+=v*self.up.get(n,0)*self.gen_mult(n)
         for n,b,v in CLICK_ADD: lpc+=v*self.up.get(n,0)
         for n,b,v in CLICK_MULT: lpc*=v**min(self.up.get(n,0),1)
         for n,b,v in QA: qa+=v*self.up.get(n,0)
@@ -83,8 +101,19 @@ class Sim:
             sm=1.0
             for sk in self.owned_sk:
                 if self.tree[sk][2]=="sec_mult": sm*=self.tree[sk][3]
-            d=v*sm*s["pm"]*p*s["rate"]*math.sqrt(p)
+            d=v*self.gen_mult(n)*sm*s["pm"]*p*s["rate"]*math.sqrt(p)
             if d>0 and c/d<bestpb and c<=self.money: best=(n,c);bestpb=c/d
+        for tid,tgt,b,un,mv in TIERS:
+            if self.up.get(tid,0)>=1: continue
+            if self.up.get(tgt,0)<un: continue
+            c=self.cost(b,0,s["cost_mult"])
+            sm=1.0
+            for sk in self.owned_sk:
+                if self.tree[sk][2]=="sec_mult": sm*=self.tree[sk][3]
+            gv=next(v for n,_,v in GENS if n==tgt)
+            contrib=gv*self.up.get(tgt,0)*self.gen_mult(tgt)
+            d=contrib*sm*s["pm"]*p*s["rate"]*math.sqrt(p)
+            if d>0 and c/d<bestpb and c<=self.money: best=(tid,c);bestpb=c/d
         for n,b,v in CLICK_ADD:
             c=self.cost(b,self.up.get(n,0),s["cost_mult"])
             cm=1.0

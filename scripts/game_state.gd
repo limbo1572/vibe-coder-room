@@ -275,7 +275,7 @@ func recalculate_stats() -> void:
 			continue
 		match def["effect_type"]:
 			UpgradeCatalog.EffectType.LOC_PER_SEC:
-				loc_per_sec += def["effect_value"] * owned
+				loc_per_sec += def["effect_value"] * owned * generator_mult(def["id"])
 			UpgradeCatalog.EffectType.LOC_PER_CLICK_ADD:
 				loc_per_click += def["effect_value"] * owned
 			UpgradeCatalog.EffectType.QA_POWER:
@@ -301,6 +301,18 @@ func recalculate_stats() -> void:
 	loc_per_click *= global_loc_mult
 	loc_per_sec *= global_loc_mult
 	max_loc_per_sec_seen = maxf(max_loc_per_sec_seen, loc_per_sec)
+
+
+func generator_mult(gen_id: String) -> float:
+	var mult := 1.0
+	for def: Dictionary in UpgradeCatalog.all():
+		if def["effect_type"] != UpgradeCatalog.EffectType.GENERATOR_MULT:
+			continue
+		if str(def.get("target_id", "")) != gen_id:
+			continue
+		if get_upgrade_owned(def["id"]) > 0:
+			mult *= float(def["effect_value"])
+	return mult
 
 
 func _reset_skill_modifiers() -> void:
@@ -560,7 +572,7 @@ func get_active_bonuses() -> Dictionary:
 				generators.append({
 					"name": def["name"],
 					"owned": owned,
-					"rate": def["effect_value"] * owned,
+					"rate": def["effect_value"] * owned * generator_mult(def["id"]),
 				})
 			UpgradeCatalog.EffectType.LOC_PER_CLICK_ADD:
 				click_add += def["effect_value"] * owned
@@ -1104,7 +1116,7 @@ func prestige_threshold() -> float:
 func preview_prestige_points() -> int:
 	if not can_prestige():
 		return 0
-	return 1 + int(floor(log(money / prestige_threshold()) / log(PRESTIGE_THRESHOLD_STEP)))
+	return 1 + int(floor(log(money / prestige_threshold()) / log(PRESTIGE_THRESHOLD_STEP) + 1e-9))
 
 
 func money_for_next_prestige_point() -> float:

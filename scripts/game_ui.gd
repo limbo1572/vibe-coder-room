@@ -443,6 +443,8 @@ func _category_title(category: String) -> String:
 			return "QA"
 		"deploy":
 			return "Deploy"
+		"tiers":
+			return "Тіри генераторів"
 		_:
 			return category
 
@@ -1669,6 +1671,11 @@ func _refresh_upgrade_visibility() -> void:
 			show = GameState.hello_world_done and not GameState.click_unlocked
 		else:
 			show = GameState.click_unlocked
+			if def.get("effect_type") == UpgradeCatalog.EffectType.GENERATOR_MULT:
+				if GameState.get_upgrade_owned(def["id"]) <= 0:
+					var target_id := str(def.get("target_id", ""))
+					var need := int(def.get("unlock_at_owned", 0))
+					show = show and GameState.get_upgrade_owned(target_id) >= need
 		row.visible = show
 		if show:
 			visible_categories[category] = true
@@ -1927,7 +1934,7 @@ func _show_prestige_confirm_dialog() -> void:
 	var pts := GameState.preview_prestige_points()
 	var next_at := GameState.money_for_next_prestige_point()
 	_prestige_dialog.dialog_text = (
-		"%s\n\nРефактор коштує $%s. Отримаєш +%d очок престижу.\n"
+		"%s\n\nРефактор коштує $%s. Очок престижу: +%d.\n"
 		+ "Або потерпи до $%s — буде ще +1. Я б почекав. Або ні. Як хочеш."
 	) % [
 		flavor,
